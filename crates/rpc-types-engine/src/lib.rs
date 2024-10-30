@@ -13,6 +13,8 @@ extern crate alloc;
 
 mod cancun;
 pub use cancun::*;
+mod prague;
+pub use prague::*;
 mod sidecar;
 pub use sidecar::*;
 
@@ -58,4 +60,5 @@ pub const CAPABILITIES: &[&str] = &[
     "engine_newPayloadV4",
     "engine_getPayloadBodiesByHashV1",
     "engine_getPayloadBodiesByRangeV1",
+    "engine_getInclusionList",
 ];
