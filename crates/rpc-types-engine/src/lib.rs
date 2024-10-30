@@ -60,5 +60,5 @@ pub const CAPABILITIES: &[&str] = &[
     "engine_newPayloadV4",
     "engine_getPayloadBodiesByHashV1",
     "engine_getPayloadBodiesByRangeV1",
-    "engine_getInclusionList",
+    "engine_getInclusionListV1",
 ];
