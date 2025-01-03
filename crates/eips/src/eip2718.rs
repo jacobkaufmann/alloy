@@ -5,10 +5,7 @@
 use crate::alloc::vec::Vec;
 use alloy_primitives::{keccak256, Sealed, B256};
 use alloy_rlp::{Buf, BufMut, Header, EMPTY_STRING_CODE};
-use core::{
-    fmt,
-    fmt::{Display, Formatter},
-};
+use core::fmt;
 
 // https://eips.ethereum.org/EIPS/eip-2718#transactiontype-only-goes-up-to-0x7f
 const TX_TYPE_BYTE_MAX: u8 = 0x7f;
@@ -28,8 +25,8 @@ pub enum Eip2718Error {
 /// Result type for [EIP-2718] decoding.
 pub type Eip2718Result<T, E = Eip2718Error> = core::result::Result<T, E>;
 
-impl Display for Eip2718Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for Eip2718Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::RlpError(err) => write!(f, "{err}"),
             Self::UnexpectedType(t) => write!(f, "Unexpected type flag. Got {t}."),
@@ -138,13 +135,11 @@ pub trait Decodable2718: Sized {
         *buf = h_decode;
 
         let remaining_len = buf.len();
-
         if remaining_len == 0 || remaining_len < h.payload_length {
             return Err(alloy_rlp::Error::InputTooShort.into());
         }
 
-        let ty = buf[0];
-        buf.advance(1);
+        let ty = buf.get_u8();
         let tx = Self::typed_decode(ty, buf)?;
 
         let bytes_consumed = remaining_len - buf.len();
@@ -175,7 +170,7 @@ pub trait Decodable2718: Sized {
 /// over the accepted transaction types.
 ///
 /// [EIP-2718]: https://eips.ethereum.org/EIPS/eip-2718
-pub trait Encodable2718: Sized + Send + Sync + 'static {
+pub trait Encodable2718: Sized + Send + Sync {
     /// Return the type flag (if any).
     ///
     /// This should return `None` for the default (legacy) variant of the

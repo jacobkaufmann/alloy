@@ -5,6 +5,139 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2](https://github.com/alloy-rs/alloy/releases/tag/v0.9.2) - 2025-01-03
+
+### Features
+
+- Add block to payloadv1 ([#1875](https://github.com/alloy-rs/alloy/issues/1875))
+- Add block to payloadbodyv1 ([#1874](https://github.com/alloy-rs/alloy/issues/1874))
+
+## [0.9.1](https://github.com/alloy-rs/alloy/releases/tag/v0.9.1) - 2024-12-30
+
+### Miscellaneous Tasks
+
+- Release 0.9.1
+
+## [0.9.0](https://github.com/alloy-rs/alloy/releases/tag/v0.9.0) - 2024-12-30
+
+### Features
+
+- Add ExecutionPayloadFieldV2 into ExecutionPayload ([#1858](https://github.com/alloy-rs/alloy/issues/1858))
+- Add try into block with sidecar ([#1856](https://github.com/alloy-rs/alloy/issues/1856))
+- Misc payloadenvelopeinput conversions ([#1855](https://github.com/alloy-rs/alloy/issues/1855))
+- Add tryfrom payload for block ([#1854](https://github.com/alloy-rs/alloy/issues/1854))
+- Add tryfrom payloadv2 + v3 for block ([#1853](https://github.com/alloy-rs/alloy/issues/1853))
+- Add tryfrom payloadv1 for block ([#1851](https://github.com/alloy-rs/alloy/issues/1851))
+- [pectra] Revert EIP-7742 ([#1807](https://github.com/alloy-rs/alloy/issues/1807))
+
+### Miscellaneous Tasks
+
+- Release 0.9.0
+
+## [0.8.3](https://github.com/alloy-rs/alloy/releases/tag/v0.8.3) - 2024-12-20
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
+
+## [0.8.2](https://github.com/alloy-rs/alloy/releases/tag/v0.8.2) - 2024-12-19
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+
+## [0.8.1](https://github.com/alloy-rs/alloy/releases/tag/v0.8.1) - 2024-12-16
+
+### Miscellaneous Tasks
+
+- Release 0.8.1
+- Reuse v3 envelope in v4 envelope ([#1795](https://github.com/alloy-rs/alloy/issues/1795))
+
+## [0.8.0](https://github.com/alloy-rs/alloy/releases/tag/v0.8.0) - 2024-12-10
+
+### Features
+
+- [engine] Forkchoice Version ([#1744](https://github.com/alloy-rs/alloy/issues/1744))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0 ([#1778](https://github.com/alloy-rs/alloy/issues/1778))
+
+## [0.7.3](https://github.com/alloy-rs/alloy/releases/tag/v0.7.3) - 2024-12-05
+
+### Miscellaneous Tasks
+
+- Release 0.7.3
+
+## [Unreleased](https://github.com/alloy-rs/alloy/compare/v0.7.0...HEAD)
+
+### Dependencies
+
+- [general] Bump MSRV to 1.81, use `core::error::Error` on `no-std` compatible crates ([#1552](https://github.com/alloy-rs/alloy/issues/1552))
+
+### Miscellaneous Tasks
+
+- Release 0.7.2 ([#1729](https://github.com/alloy-rs/alloy/issues/1729))
+
+### Other
+
+- Add non strict JSON decoding for engine Payloadv2 type ([#1740](https://github.com/alloy-rs/alloy/issues/1740))
+- Remove wrapper BlobsBundleV1Ssz ([#1726](https://github.com/alloy-rs/alloy/issues/1726))
+- Change BlobsBundleV1Ssz unwrap implementation to safe code ([#1723](https://github.com/alloy-rs/alloy/issues/1723))
+
+## [0.7.0](https://github.com/alloy-rs/alloy/releases/tag/v0.7.0) - 2024-11-28
+
+### Features
+
+- [eips] Make prague field an enum ([#1574](https://github.com/alloy-rs/alloy/issues/1574))
+- EIP-7742 ([#1600](https://github.com/alloy-rs/alloy/issues/1600))
+
+### Miscellaneous Tasks
+
+- Release 0.7.0
+- Release 0.7.0
+- Release 0.7.0
+
+## [0.6.4](https://github.com/alloy-rs/alloy/releases/tag/v0.6.4) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.6.4
+
+## [0.6.3](https://github.com/alloy-rs/alloy/releases/tag/v0.6.3) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.6.3
+- Release 0.6.2 ([#1632](https://github.com/alloy-rs/alloy/issues/1632))
+
+## [0.6.1](https://github.com/alloy-rs/alloy/releases/tag/v0.6.1) - 2024-11-06
+
+### Miscellaneous Tasks
+
+- Release 0.6.1
+
+## [0.6.0](https://github.com/alloy-rs/alloy/releases/tag/v0.6.0) - 2024-11-06
+
+### Bug Fixes
+
+- Enable std with jwt ([#1569](https://github.com/alloy-rs/alloy/issues/1569))
+
+### Miscellaneous Tasks
+
+- Release 0.6.0
+- Add default to payloadattributes ([#1625](https://github.com/alloy-rs/alloy/issues/1625))
+
+### Other
+
+- Small refactor for `JwtSecret` ([#1611](https://github.com/alloy-rs/alloy/issues/1611))
+
+## [0.5.4](https://github.com/alloy-rs/alloy/releases/tag/v0.5.4) - 2024-10-23
+
+### Miscellaneous Tasks
+
+- Release 0.5.4
+
 ## [0.5.3](https://github.com/alloy-rs/alloy/releases/tag/v0.5.3) - 2024-10-22
 
 ### Features

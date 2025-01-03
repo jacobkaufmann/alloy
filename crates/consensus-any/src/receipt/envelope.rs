@@ -1,4 +1,4 @@
-use crate::{Eip658Value, ReceiptWithBloom, TxReceipt};
+use alloy_consensus::{Eip658Value, Receipt, ReceiptWithBloom, TxReceipt};
 use alloy_eips::eip2718::{Decodable2718, Eip2718Result, Encodable2718};
 use alloy_primitives::{bytes::BufMut, Bloom, Log};
 use alloy_rlp::{Decodable, Encodable};
@@ -20,16 +20,20 @@ use core::fmt;
 pub struct AnyReceiptEnvelope<T = Log> {
     /// The receipt envelope.
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub inner: ReceiptWithBloom<T>,
+    pub inner: ReceiptWithBloom<Receipt<T>>,
     /// The transaction type.
     #[cfg_attr(feature = "serde", serde(with = "alloy_serde::quantity"))]
     pub r#type: u8,
 }
 
-impl<T> AnyReceiptEnvelope<T>
-where
-    T: Encodable,
-{
+impl<T> AnyReceiptEnvelope<T> {
+    /// Returns whether this is a legacy receipt (type 0)
+    pub const fn is_legacy(&self) -> bool {
+        self.r#type == 0
+    }
+}
+
+impl<T: Encodable> AnyReceiptEnvelope<T> {
     /// Calculate the length of the rlp payload of the network encoded receipt.
     pub fn rlp_payload_length(&self) -> usize {
         let length = self.inner.length();
@@ -42,11 +46,6 @@ where
 }
 
 impl<T> AnyReceiptEnvelope<T> {
-    /// Returns whether this is a legacy receipt (type 0)
-    pub const fn is_legacy(&self) -> bool {
-        self.r#type == 0
-    }
-
     /// Return true if the transaction was successful.
     ///
     /// ## Note
@@ -68,7 +67,7 @@ impl<T> AnyReceiptEnvelope<T> {
     ///
     /// [EIP-658]: https://eips.ethereum.org/EIPS/eip-658
     pub const fn status(&self) -> bool {
-        matches!(self.inner.receipt.status, Eip658Value::Eip658(true) | Eip658Value::PostState(_))
+        self.inner.receipt.status.coerce_status()
     }
 
     /// Return the receipt's bloom.
@@ -77,7 +76,7 @@ impl<T> AnyReceiptEnvelope<T> {
     }
 
     /// Returns the cumulative gas used at this receipt.
-    pub const fn cumulative_gas_used(&self) -> u128 {
+    pub const fn cumulative_gas_used(&self) -> u64 {
         self.inner.receipt.cumulative_gas_used
     }
 
@@ -87,28 +86,30 @@ impl<T> AnyReceiptEnvelope<T> {
     }
 }
 
-impl<T> TxReceipt<T> for AnyReceiptEnvelope<T>
+impl<T> TxReceipt for AnyReceiptEnvelope<T>
 where
     T: Clone + fmt::Debug + PartialEq + Eq + Send + Sync,
 {
+    type Log = T;
+
     fn status_or_post_state(&self) -> Eip658Value {
-        self.inner.status_or_post_state()
+        self.inner.receipt.status
     }
 
     fn status(&self) -> bool {
-        self.inner.status()
+        self.status()
     }
 
     fn bloom(&self) -> Bloom {
-        self.inner.logs_bloom
+        self.bloom()
     }
 
-    fn cumulative_gas_used(&self) -> u128 {
-        self.inner.receipt.cumulative_gas_used
+    fn cumulative_gas_used(&self) -> u64 {
+        self.cumulative_gas_used()
     }
 
     fn logs(&self) -> &[T] {
-        &self.inner.receipt.logs
+        self.logs()
     }
 }
 

@@ -3,6 +3,9 @@ use alloy_primitives::U256;
 /// The default Ethereum block gas limit.
 pub const ETHEREUM_BLOCK_GAS_LIMIT: u64 = 30_000_000;
 
+/// The bound divisor of the gas limit, used in update calculations.
+pub const GAS_LIMIT_BOUND_DIVISOR: u64 = 1024;
+
 /// The minimum tx fee below which the txpool will reject the transaction.
 ///
 /// Configured to `7` WEI which is the lowest possible value of base fee under mainnet EIP-1559
@@ -51,3 +54,13 @@ pub(crate) const OP_MAINNET_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER: u128 = 6;
 /// Base fee max change denominator for Base Sepolia as defined in the Optimism
 /// [transaction costs](https://community.optimism.io/docs/developers/build/differences/#transaction-costs) doc.
 pub(crate) const BASE_SEPOLIA_EIP1559_DEFAULT_ELASTICITY_MULTIPLIER: u128 = 10;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn min_protocol_sanity() {
+        assert_eq!(MIN_PROTOCOL_BASE_FEE_U256.to::<u64>(), MIN_PROTOCOL_BASE_FEE);
+    }
+}

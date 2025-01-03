@@ -1,11 +1,12 @@
 //! Alloy basic Transaction Request type.
 
-use crate::{transaction::AccessList, BlobTransactionSidecar, Transaction};
+use crate::{transaction::AccessList, BlobTransactionSidecar, Transaction, TransactionTrait};
 use alloy_consensus::{
-    Transaction as _, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant, TxEip4844WithSidecar,
-    TxEip7702, TxEnvelope, TxLegacy, TxType, TypedTransaction,
+    TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant, TxEip4844WithSidecar, TxEip7702, TxEnvelope,
+    TxLegacy, TxType, Typed2718, TypedTransaction,
 };
 use alloy_eips::eip7702::SignedAuthorization;
+use alloy_network_primitives::{TransactionBuilder4844, TransactionBuilder7702};
 use alloy_primitives::{Address, Bytes, ChainId, TxKind, B256, U256};
 use core::hash::Hash;
 
@@ -139,6 +140,55 @@ impl TransactionRequest {
     pub const fn from(mut self, from: Address) -> Self {
         self.from = Some(from);
         self
+    }
+
+    /// Initializes the [`TransactionRequest`] with the provided transaction.
+    ///
+    /// Note: This leaves the `from` field empty.
+    pub fn from_transaction<T: TransactionTrait>(tx: T) -> Self {
+        let to = Some(tx.to().into());
+        let gas = tx.gas_limit();
+        let value = tx.value();
+        let input = tx.input().clone();
+        let nonce = tx.nonce();
+        let chain_id = tx.chain_id();
+        let access_list = tx.access_list().cloned();
+        let max_fee_per_blob_gas = tx.max_fee_per_blob_gas();
+        let authorization_list = tx.authorization_list().map(|l| l.to_vec());
+        let blob_versioned_hashes = tx.blob_versioned_hashes().map(Vec::from);
+        let tx_type = tx.ty();
+
+        // fees depending on the transaction type
+        let (gas_price, max_fee_per_gas) = if tx.is_dynamic_fee() {
+            (None, Some(tx.max_fee_per_gas()))
+        } else {
+            (Some(tx.max_fee_per_gas()), None)
+        };
+        let max_priority_fee_per_gas = tx.max_priority_fee_per_gas();
+
+        Self {
+            from: None,
+            to,
+            gas_price,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+            gas: Some(gas),
+            value: Some(value),
+            input: TransactionInput::new(input),
+            nonce: Some(nonce),
+            chain_id,
+            access_list,
+            max_fee_per_blob_gas,
+            blob_versioned_hashes,
+            transaction_type: Some(tx_type),
+            sidecar: None,
+            authorization_list,
+        }
+    }
+
+    /// Initializes the [`TransactionRequest`] with the provided transaction and sender.
+    pub fn from_transaction_with_sender<T: TransactionTrait>(tx: T, from: Address) -> Self {
+        Self::from_transaction(tx).from(from)
     }
 
     /// Sets the transactions type for the transactions.
@@ -609,18 +659,16 @@ impl TransactionRequest {
         Some(pref)
     }
 
-    /// Build an [`TypedTransaction`]
+    /// Build a [`TypedTransaction`]
     ///
-    /// In case `Ok(...)` is returned, the `TypedTransaction` is guaranteed to be _complete_, e.g.
-    /// sendable to the network.
+    /// When `Ok(...)` is returned, the `TypedTransaction` is guaranteed to be _complete_. Which
+    /// is to say, that it is signable, and the signed versino can be sent to the network.
     pub fn build_typed_tx(self) -> Result<TypedTransaction, Self> {
-        let tx_type = self.buildable_type();
-
-        if tx_type.is_none() {
+        let Some(tx_type) = self.buildable_type() else {
             return Err(self);
-        }
+        };
 
-        Ok(match tx_type.expect("checked") {
+        Ok(match tx_type {
             TxType::Legacy => self.build_legacy().expect("checked)").into(),
             TxType::Eip2930 => self.build_2930().expect("checked)").into(),
             TxType::Eip1559 => self.build_1559().expect("checked)").into(),
@@ -630,14 +678,15 @@ impl TransactionRequest {
         })
     }
 
-    /// Build an [`TypedTransaction`].
+    /// Build a [`TypedTransaction`].
     ///
-    /// In case `Ok(...)` is returned, the `TypedTransaction` does not guarantee to be _complete_,
-    /// e.g. sendable to the network.
+    /// When `Ok(...)` is returned, the `TypedTransaction` is not guaranteed to be _complete_,
+    /// only signable.
     ///
     /// E.g. a particular case is when the transaction is of type `Eip4844` and the `sidecar` is not
-    /// set, in this case the transaction is not _complete_. It can still be used to calculate the
-    /// signature of the transaction though.
+    /// set, in this case the transaction is not _complete_, i.e. it cannot be sent to the network
+    /// once signed. However, it can still be used to calculate the signing hash, signature of
+    /// the transaction, and transaction trie hash.
     ///
     /// In case the requirement is to build a _complete_ transaction, use `build_typed_tx` instead.
     pub fn build_consensus_tx(self) -> Result<TypedTransaction, BuildTransactionErr> {
@@ -657,104 +706,32 @@ impl TransactionRequest {
     }
 }
 
-/// Helper type that supports both `data` and `input` fields that map to transaction input data.
-///
-/// This is done for compatibility reasons where older implementations used `data` instead of the
-/// newer, recommended `input` field.
-///
-/// If both fields are set, it is expected that they contain the same value, otherwise an error is
-/// returned.
-#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[doc(alias = "TxInput")]
-pub struct TransactionInput {
-    /// Transaction data
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    pub input: Option<Bytes>,
-    /// Transaction data
-    ///
-    /// This is the same as `input` but is used for backwards compatibility: <https://github.com/ethereum/go-ethereum/issues/15628>
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    pub data: Option<Bytes>,
-}
-
-impl TransactionInput {
-    /// Creates a new instance with the given input data.
-    pub const fn new(data: Bytes) -> Self {
-        Self::maybe_input(Some(data))
+impl TransactionBuilder4844 for TransactionRequest {
+    fn max_fee_per_blob_gas(&self) -> Option<u128> {
+        self.max_fee_per_blob_gas
     }
 
-    /// Creates a new instance with the given input data and sets both `input` and `data` fields to
-    /// the same value.
-    pub fn both(data: Bytes) -> Self {
-        Self::maybe_both(Some(data))
+    fn set_max_fee_per_blob_gas(&mut self, max_fee_per_blob_gas: u128) {
+        self.max_fee_per_blob_gas = Some(max_fee_per_blob_gas)
     }
 
-    /// Creates a new instance with the given input data.
-    pub const fn maybe_input(input: Option<Bytes>) -> Self {
-        Self { input, data: None }
+    fn blob_sidecar(&self) -> Option<&BlobTransactionSidecar> {
+        self.sidecar.as_ref()
     }
 
-    /// Creates a new instance with the given input data and sets both `input` and `data` fields to
-    /// the same value.
-    pub fn maybe_both(input: Option<Bytes>) -> Self {
-        Self { data: input.clone(), input }
-    }
-
-    /// Consumes the type and returns the optional input data.
-    #[inline]
-    pub fn into_input(self) -> Option<Bytes> {
-        self.input.or(self.data)
-    }
-
-    /// Consumes the type and returns the optional input data.
-    ///
-    /// Returns an error if both `data` and `input` fields are set and not equal.
-    #[inline]
-    pub fn try_into_unique_input(self) -> Result<Option<Bytes>, TransactionInputError> {
-        self.check_unique_input().map(|()| self.into_input())
-    }
-
-    /// Returns the optional input data.
-    #[inline]
-    pub fn input(&self) -> Option<&Bytes> {
-        self.input.as_ref().or(self.data.as_ref())
-    }
-
-    /// Returns the optional input data.
-    ///
-    /// Returns an error if both `data` and `input` fields are set and not equal.
-    #[inline]
-    pub fn unique_input(&self) -> Result<Option<&Bytes>, TransactionInputError> {
-        self.check_unique_input().map(|()| self.input())
-    }
-
-    fn check_unique_input(&self) -> Result<(), TransactionInputError> {
-        if let (Some(input), Some(data)) = (&self.input, &self.data) {
-            if input != data {
-                return Err(TransactionInputError::default());
-            }
-        }
-        Ok(())
+    fn set_blob_sidecar(&mut self, sidecar: BlobTransactionSidecar) {
+        self.sidecar = Some(sidecar);
+        self.populate_blob_hashes();
     }
 }
 
-impl From<Vec<u8>> for TransactionInput {
-    fn from(input: Vec<u8>) -> Self {
-        Self { input: Some(input.into()), data: None }
+impl TransactionBuilder7702 for TransactionRequest {
+    fn authorization_list(&self) -> Option<&Vec<SignedAuthorization>> {
+        self.authorization_list.as_ref()
     }
-}
 
-impl From<Bytes> for TransactionInput {
-    fn from(input: Bytes) -> Self {
-        Self { input: Some(input), data: None }
-    }
-}
-
-impl From<Option<Bytes>> for TransactionInput {
-    fn from(input: Option<Bytes>) -> Self {
-        Self { input, data: None }
+    fn set_authorization_list(&mut self, authorization_list: Vec<SignedAuthorization>) {
+        self.authorization_list = Some(authorization_list);
     }
 }
 
@@ -1015,20 +992,117 @@ impl From<TxEnvelope> for TransactionRequest {
                     tx.strip_signature().into()
                 }
             }
-            _ => Default::default(),
         }
     }
 }
 
+/// Helper type that supports both `data` and `input` fields that map to transaction input data.
+///
+/// This is done for compatibility reasons where older implementations used `data` instead of the
+/// newer, recommended `input` field.
+///
+/// If both fields are set, it is expected that they contain the same value, otherwise an error is
+/// returned.
+#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[doc(alias = "TxInput")]
+pub struct TransactionInput {
+    /// Transaction data
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub input: Option<Bytes>,
+    /// Transaction data
+    ///
+    /// This is the same as `input` but is used for backwards compatibility: <https://github.com/ethereum/go-ethereum/issues/15628>
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub data: Option<Bytes>,
+}
+
+impl TransactionInput {
+    /// Creates a new instance with the given input data.
+    pub const fn new(data: Bytes) -> Self {
+        Self::maybe_input(Some(data))
+    }
+
+    /// Creates a new instance with the given input data and sets both `input` and `data` fields to
+    /// the same value.
+    pub fn both(data: Bytes) -> Self {
+        Self::maybe_both(Some(data))
+    }
+
+    /// Creates a new instance with the given input data.
+    pub const fn maybe_input(input: Option<Bytes>) -> Self {
+        Self { input, data: None }
+    }
+
+    /// Creates a new instance with the given input data and sets both `input` and `data` fields to
+    /// the same value.
+    pub fn maybe_both(input: Option<Bytes>) -> Self {
+        Self { data: input.clone(), input }
+    }
+
+    /// Consumes the type and returns the optional input data.
+    #[inline]
+    pub fn into_input(self) -> Option<Bytes> {
+        self.input.or(self.data)
+    }
+
+    /// Consumes the type and returns the optional input data.
+    ///
+    /// Returns an error if both `data` and `input` fields are set and not equal.
+    #[inline]
+    pub fn try_into_unique_input(self) -> Result<Option<Bytes>, TransactionInputError> {
+        self.check_unique_input().map(|()| self.into_input())
+    }
+
+    /// Returns the optional input data.
+    #[inline]
+    pub fn input(&self) -> Option<&Bytes> {
+        self.input.as_ref().or(self.data.as_ref())
+    }
+
+    /// Returns the optional input data.
+    ///
+    /// Returns an error if both `data` and `input` fields are set and not equal.
+    #[inline]
+    pub fn unique_input(&self) -> Result<Option<&Bytes>, TransactionInputError> {
+        self.check_unique_input().map(|()| self.input())
+    }
+
+    fn check_unique_input(&self) -> Result<(), TransactionInputError> {
+        if let (Some(input), Some(data)) = (&self.input, &self.data) {
+            if input != data {
+                return Err(TransactionInputError::default());
+            }
+        }
+        Ok(())
+    }
+}
+
+impl From<Vec<u8>> for TransactionInput {
+    fn from(input: Vec<u8>) -> Self {
+        Self { input: Some(input.into()), data: None }
+    }
+}
+
+impl From<Bytes> for TransactionInput {
+    fn from(input: Bytes) -> Self {
+        Self { input: Some(input), data: None }
+    }
+}
+
+impl From<Option<Bytes>> for TransactionInput {
+    fn from(input: Option<Bytes>) -> Self {
+        Self { input, data: None }
+    }
+}
+
 /// Error thrown when both `data` and `input` fields are set and not equal.
-#[derive(Debug, Default, derive_more::Display)]
-#[display("both \"data\" and \"input\" are set and not equal. Please use \"input\" to pass transaction call data")]
+#[derive(Debug, Default, thiserror::Error)]
+#[error("both \"data\" and \"input\" are set and not equal. Please use \"input\" to pass transaction call data")]
 #[doc(alias = "TxInputError")]
 #[non_exhaustive]
 pub struct TransactionInputError;
-
-#[cfg(feature = "std")]
-impl std::error::Error for TransactionInputError {}
 
 /// Error thrown when a transaction request cannot be built into a transaction.
 #[derive(Debug)]

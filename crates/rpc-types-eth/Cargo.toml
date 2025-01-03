@@ -21,12 +21,13 @@ workspace = true
 [dependencies]
 alloy-eips.workspace = true
 alloy-consensus.workspace = true
+alloy-consensus-any.workspace = true
 alloy-network-primitives.workspace = true
 alloy-rlp = { workspace = true, features = ["arrayvec", "derive"] }
 alloy-primitives = { workspace = true, features = ["rlp", "map"] }
 
 itertools.workspace = true
-derive_more = { workspace = true, features = ["display"] }
+thiserror.workspace = true
 
 # serde
 alloy-serde = { workspace = true, optional = true }

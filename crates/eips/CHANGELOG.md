@@ -5,11 +5,191 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2](https://github.com/alloy-rs/alloy/releases/tag/v0.9.2) - 2025-01-03
+
+### Bug Fixes
+
+- [eip7251] Update contract address and bytecode ([#1877](https://github.com/alloy-rs/alloy/issues/1877))
+- Skip empty request objects ([#1873](https://github.com/alloy-rs/alloy/issues/1873))
+
+### Features
+
+- Sort and skip empty requests for hash ([#1878](https://github.com/alloy-rs/alloy/issues/1878))
+
+## [0.9.1](https://github.com/alloy-rs/alloy/releases/tag/v0.9.1) - 2024-12-30
+
+### Miscellaneous Tasks
+
+- Release 0.9.1
+- Add history serve window ([#1865](https://github.com/alloy-rs/alloy/issues/1865))
+
+## [0.9.0](https://github.com/alloy-rs/alloy/releases/tag/v0.9.0) - 2024-12-30
+
+### Bug Fixes
+
+- [alloy-eips] `SimpleCoder::decode_one()` should return `Ok(None)` ([#1818](https://github.com/alloy-rs/alloy/issues/1818))
+
+### Features
+
+- EIP-7840 ([#1828](https://github.com/alloy-rs/alloy/issues/1828))
+- [pectra] Revert EIP-7742 ([#1807](https://github.com/alloy-rs/alloy/issues/1807))
+
+### Other
+
+- [Feature] update Display implementation on BlockNumberOrTag ([#1857](https://github.com/alloy-rs/alloy/issues/1857))
+- [Bug] Request predeploy codes have diverged ([#1845](https://github.com/alloy-rs/alloy/issues/1845))
+- Update contract bytecode & address ([#1838](https://github.com/alloy-rs/alloy/issues/1838))
+- Update `CONSOLIDATION_REQUEST_PREDEPLOY_ADDRESS` ([#1836](https://github.com/alloy-rs/alloy/issues/1836))
+- Update `WITHDRAWAL_REQUEST_PREDEPLOY_ADDRESS` ([#1834](https://github.com/alloy-rs/alloy/issues/1834))
+
+## [0.8.3](https://github.com/alloy-rs/alloy/releases/tag/v0.8.3) - 2024-12-20
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
+
+## [0.8.2](https://github.com/alloy-rs/alloy/releases/tag/v0.8.2) - 2024-12-19
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+
+## [0.8.1](https://github.com/alloy-rs/alloy/releases/tag/v0.8.1) - 2024-12-16
+
+### Features
+
+- [relay] ExecutionRequestsV4 with eip7685::Requests conversion ([#1787](https://github.com/alloy-rs/alloy/issues/1787))
+- Add requests with capacity ([#1794](https://github.com/alloy-rs/alloy/issues/1794))
+
+### Miscellaneous Tasks
+
+- Release 0.8.1
+- Port calc block gas limit ([#1798](https://github.com/alloy-rs/alloy/issues/1798))
+- Add helper for loading custom trusted setup ([#1779](https://github.com/alloy-rs/alloy/issues/1779))
+
+### Other
+
+- Calc_blob_gasprice made const ([#1788](https://github.com/alloy-rs/alloy/issues/1788))
+
+## [0.8.0](https://github.com/alloy-rs/alloy/releases/tag/v0.8.0) - 2024-12-10
+
+### Features
+
+- Add arbitrary for alloy types ([#1777](https://github.com/alloy-rs/alloy/issues/1777))
+- EIP-7691 ([#1762](https://github.com/alloy-rs/alloy/issues/1762))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0 ([#1778](https://github.com/alloy-rs/alloy/issues/1778))
+- Derive Copy for BlockWithParent ([#1776](https://github.com/alloy-rs/alloy/issues/1776))
+- Improve Display and Debug for BlockId ([#1765](https://github.com/alloy-rs/alloy/issues/1765))
+
+## [0.7.3](https://github.com/alloy-rs/alloy/releases/tag/v0.7.3) - 2024-12-05
+
+### Miscellaneous Tasks
+
+- Release 0.7.3
+
+## [Unreleased](https://github.com/alloy-rs/alloy/compare/v0.7.0...HEAD)
+
+### Bug Fixes
+
+- Adjust EIP-7742 to latest spec ([#1713](https://github.com/alloy-rs/alloy/issues/1713))
+- Omit empty requests ([#1706](https://github.com/alloy-rs/alloy/issues/1706))
+- Use B256::new instead of from ([#1701](https://github.com/alloy-rs/alloy/issues/1701))
+
+### Dependencies
+
+- [general] Bump MSRV to 1.81, use `core::error::Error` on `no-std` compatible crates ([#1552](https://github.com/alloy-rs/alloy/issues/1552))
+
+### Documentation
+
+- Update docs for eip7685 `Requests` ([#1714](https://github.com/alloy-rs/alloy/issues/1714))
+
+### Features
+
+- Impl `Encodable2718` for `ReceiptWithBloom` ([#1719](https://github.com/alloy-rs/alloy/issues/1719))
+- EIP-7685 requests helpers ([#1699](https://github.com/alloy-rs/alloy/issues/1699))
+
+### Miscellaneous Tasks
+
+- Release 0.7.2 ([#1729](https://github.com/alloy-rs/alloy/issues/1729))
+
+## [0.7.0](https://github.com/alloy-rs/alloy/releases/tag/v0.7.0) - 2024-11-28
+
+### Bug Fixes
+
+- EIP-7742 fixes ([#1697](https://github.com/alloy-rs/alloy/issues/1697))
+
+### Features
+
+- [eips] Make prague field an enum ([#1574](https://github.com/alloy-rs/alloy/issues/1574))
+- EIP-7742 ([#1600](https://github.com/alloy-rs/alloy/issues/1600))
+
+### Miscellaneous Tasks
+
+- Release 0.7.0
+- EIP-7685 changes ([#1599](https://github.com/alloy-rs/alloy/issues/1599))
+
+### Other
+
+- Add `BlockWithParent` ([#1650](https://github.com/alloy-rs/alloy/issues/1650))
+
+## [0.6.4](https://github.com/alloy-rs/alloy/releases/tag/v0.6.4) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.6.4
+
+## [0.6.3](https://github.com/alloy-rs/alloy/releases/tag/v0.6.3) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.6.3
+- Release 0.6.2 ([#1632](https://github.com/alloy-rs/alloy/issues/1632))
+
+## [0.6.1](https://github.com/alloy-rs/alloy/releases/tag/v0.6.1) - 2024-11-06
+
+### Miscellaneous Tasks
+
+- Release 0.6.1
+
+## [0.6.0](https://github.com/alloy-rs/alloy/releases/tag/v0.6.0) - 2024-11-06
+
+### Bug Fixes
+
+- Add more rlp correctness checks ([#1595](https://github.com/alloy-rs/alloy/issues/1595))
+- Make a sensible encoding api ([#1496](https://github.com/alloy-rs/alloy/issues/1496))
+
+### Documentation
+
+- Expand on what `Requests` contains ([#1564](https://github.com/alloy-rs/alloy/issues/1564))
+
+### Features
+
+- [eips] Indexed Blob Hash ([#1526](https://github.com/alloy-rs/alloy/issues/1526))
+
+### Miscellaneous Tasks
+
+- Release 0.6.0
+- Make withdrawals pub ([#1623](https://github.com/alloy-rs/alloy/issues/1623))
+- Fix some compile issues for no-std test ([#1606](https://github.com/alloy-rs/alloy/issues/1606))
+
+### Other
+
+- Add missing unit test for `MIN_PROTOCOL_BASE_FEE` ([#1558](https://github.com/alloy-rs/alloy/issues/1558))
+- Rm `BEACON_CONSENSUS_REORG_UNWIND_DEPTH` ([#1556](https://github.com/alloy-rs/alloy/issues/1556))
+- Add unit tests to secure all conversions and impl ([#1544](https://github.com/alloy-rs/alloy/issues/1544))
+
 ## [0.5.4](https://github.com/alloy-rs/alloy/releases/tag/v0.5.4) - 2024-10-23
 
 ### Bug Fixes
 
 - Sidecar rlp decoding ([#1549](https://github.com/alloy-rs/alloy/issues/1549))
+
+### Miscellaneous Tasks
+
+- Release 0.5.4
 
 ### Other
 

@@ -46,6 +46,33 @@ impl<T> BlockTransactions<T> {
         matches!(self, Self::Full(_))
     }
 
+    /// Converts the transaction type by applying a function to each transaction.
+    ///
+    /// Returns the block with the new transaction type.
+    pub fn map<U>(self, f: impl FnMut(T) -> U) -> BlockTransactions<U> {
+        match self {
+            Self::Full(txs) => BlockTransactions::Full(txs.into_iter().map(f).collect()),
+            Self::Hashes(hashes) => BlockTransactions::Hashes(hashes),
+            Self::Uncle => BlockTransactions::Uncle,
+        }
+    }
+
+    /// Converts the transaction type by applying a fallible function to each transaction.
+    ///
+    /// Returns the block with the new transaction type if all transactions were successfully.
+    pub fn try_map<U, E>(
+        self,
+        f: impl FnMut(T) -> Result<U, E>,
+    ) -> Result<BlockTransactions<U>, E> {
+        match self {
+            Self::Full(txs) => {
+                Ok(BlockTransactions::Full(txs.into_iter().map(f).collect::<Result<_, _>>()?))
+            }
+            Self::Hashes(hashes) => Ok(BlockTransactions::Hashes(hashes)),
+            Self::Uncle => Ok(BlockTransactions::Uncle),
+        }
+    }
+
     /// Fallibly cast to a slice of transactions.
     ///
     /// Returns `None` if the enum variant is not `Full`.
@@ -79,6 +106,16 @@ impl<T> BlockTransactions<T> {
         }
     }
 
+    /// Consumes the type and returns the transactions as a vector.
+    ///
+    /// Note: if this is an uncle or hashes, this will return an empty vector.
+    pub fn into_transactions_vec(self) -> Vec<T> {
+        match self {
+            Self::Full(txs) => txs,
+            _ => vec![],
+        }
+    }
+
     /// Returns an instance of BlockTransactions with the Uncle special case.
     #[inline]
     pub const fn uncle() -> Self {
@@ -103,6 +140,11 @@ impl<T> BlockTransactions<T> {
 }
 
 impl<T: TransactionResponse> BlockTransactions<T> {
+    /// Creates a new [`BlockTransactions::Hashes`] variant from the given iterator of transactions.
+    pub fn new_hashes(txs: impl IntoIterator<Item = impl AsRef<T>>) -> Self {
+        Self::Hashes(txs.into_iter().map(|tx| tx.as_ref().tx_hash()).collect())
+    }
+
     /// Converts `self` into `Hashes`.
     #[inline]
     pub fn convert_to_hashes(&mut self) {
@@ -258,5 +300,97 @@ mod tests {
 
         let full = false;
         assert_eq!(BlockTransactionsKind::Hashes, full.into());
+    }
+
+    #[test]
+    fn test_block_transactions_default() {
+        let default: BlockTransactions<()> = BlockTransactions::default();
+        assert!(default.is_hashes());
+        assert_eq!(default.len(), 0);
+    }
+
+    #[test]
+    fn test_block_transactions_is_methods() {
+        let hashes: BlockTransactions<()> = BlockTransactions::Hashes(vec![B256::ZERO]);
+        let full: BlockTransactions<u32> = BlockTransactions::Full(vec![42]);
+        let uncle: BlockTransactions<()> = BlockTransactions::Uncle;
+
+        assert!(hashes.is_hashes());
+        assert!(!hashes.is_full());
+        assert!(!hashes.is_uncle());
+
+        assert!(full.is_full());
+        assert!(!full.is_hashes());
+        assert!(!full.is_uncle());
+
+        assert!(uncle.is_uncle());
+        assert!(!uncle.is_full());
+        assert!(!uncle.is_hashes());
+    }
+
+    #[test]
+    fn test_as_hashes() {
+        let hashes = vec![B256::ZERO, B256::repeat_byte(1)];
+        let tx_hashes: BlockTransactions<()> = BlockTransactions::Hashes(hashes.clone());
+
+        assert_eq!(tx_hashes.as_hashes(), Some(hashes.as_slice()));
+    }
+
+    #[test]
+    fn test_as_transactions() {
+        let transactions = vec![42, 43];
+        let txs = BlockTransactions::Full(transactions.clone());
+
+        assert_eq!(txs.as_transactions(), Some(transactions.as_slice()));
+    }
+
+    #[test]
+    fn test_block_transactions_len_and_is_empty() {
+        let hashes: BlockTransactions<()> = BlockTransactions::Hashes(vec![B256::ZERO]);
+        let full = BlockTransactions::Full(vec![42]);
+        let uncle: BlockTransactions<()> = BlockTransactions::Uncle;
+
+        assert_eq!(hashes.len(), 1);
+        assert_eq!(full.len(), 1);
+        assert_eq!(uncle.len(), 0);
+
+        assert!(!hashes.is_empty());
+        assert!(!full.is_empty());
+        assert!(uncle.is_empty());
+    }
+
+    #[test]
+    fn test_block_transactions_txns_iterator() {
+        let transactions = vec![42, 43];
+        let txs = BlockTransactions::Full(transactions);
+        let mut iter = txs.txns();
+
+        assert_eq!(iter.next(), Some(&42));
+        assert_eq!(iter.next(), Some(&43));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn test_block_transactions_into_transactions() {
+        let transactions = vec![42, 43];
+        let txs = BlockTransactions::Full(transactions.clone());
+        let collected: Vec<_> = txs.into_transactions().collect();
+
+        assert_eq!(collected, transactions);
+    }
+
+    #[test]
+    fn test_block_transactions_kind_conversion() {
+        let full: BlockTransactionsKind = true.into();
+        assert_eq!(full, BlockTransactionsKind::Full);
+
+        let hashes: BlockTransactionsKind = false.into();
+        assert_eq!(hashes, BlockTransactionsKind::Hashes);
+
+        let bool_full: bool = BlockTransactionsKind::Full.into();
+        assert!(bool_full);
+
+        let bool_hashes: bool = BlockTransactionsKind::Hashes.into();
+        assert!(!bool_hashes);
     }
 }

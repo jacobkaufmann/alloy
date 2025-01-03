@@ -5,6 +5,219 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2](https://github.com/alloy-rs/alloy/releases/tag/v0.9.2) - 2025-01-03
+
+### Features
+
+- Add conversions from rpc block to consensus ([#1869](https://github.com/alloy-rs/alloy/issues/1869))
+
+## [0.9.1](https://github.com/alloy-rs/alloy/releases/tag/v0.9.1) - 2024-12-30
+
+### Miscellaneous Tasks
+
+- Release 0.9.1
+
+## [0.9.0](https://github.com/alloy-rs/alloy/releases/tag/v0.9.0) - 2024-12-30
+
+### Bug Fixes
+
+- Use u64 for all gas values ([#1848](https://github.com/alloy-rs/alloy/issues/1848))
+- Support hex values for conditional options ([#1824](https://github.com/alloy-rs/alloy/issues/1824))
+
+### Features
+
+- Add more builder style fns ([#1850](https://github.com/alloy-rs/alloy/issues/1850))
+- Add match functions ([#1847](https://github.com/alloy-rs/alloy/issues/1847))
+- EIP-7840 ([#1828](https://github.com/alloy-rs/alloy/issues/1828))
+- Add map transactions to rpc block type ([#1835](https://github.com/alloy-rs/alloy/issues/1835))
+- [pectra] Revert EIP-7742 ([#1807](https://github.com/alloy-rs/alloy/issues/1807))
+- Add cost fn for conditional opts ([#1823](https://github.com/alloy-rs/alloy/issues/1823))
+
+### Miscellaneous Tasks
+
+- Make clippy happy ([#1849](https://github.com/alloy-rs/alloy/issues/1849))
+- Rm non exhaustive from ReceiptEnvelope ([#1843](https://github.com/alloy-rs/alloy/issues/1843))
+- Rm non exhaustive for envelope ([#1842](https://github.com/alloy-rs/alloy/issues/1842))
+- Map header fns ([#1840](https://github.com/alloy-rs/alloy/issues/1840))
+- Rename ConditionalOptions ([#1825](https://github.com/alloy-rs/alloy/issues/1825))
+- Replace derive_more with thiserror ([#1822](https://github.com/alloy-rs/alloy/issues/1822))
+
+## [0.8.3](https://github.com/alloy-rs/alloy/releases/tag/v0.8.3) - 2024-12-20
+
+### Miscellaneous Tasks
+
+- Release 0.8.3
+
+## [0.8.2](https://github.com/alloy-rs/alloy/releases/tag/v0.8.2) - 2024-12-19
+
+### Bug Fixes
+
+- Relax legacy chain id check ([#1809](https://github.com/alloy-rs/alloy/issues/1809))
+
+### Miscellaneous Tasks
+
+- Release 0.8.2
+- Misc clippy ([#1812](https://github.com/alloy-rs/alloy/issues/1812))
+
+## [0.8.1](https://github.com/alloy-rs/alloy/releases/tag/v0.8.1) - 2024-12-16
+
+### Documentation
+
+- Add note about deprecated total difficulty ([#1784](https://github.com/alloy-rs/alloy/issues/1784))
+
+### Features
+
+- Add info tx types ([#1793](https://github.com/alloy-rs/alloy/issues/1793))
+
+### Miscellaneous Tasks
+
+- Release 0.8.1
+
+### Other
+
+- Improve doc clarity around build functions ([#1782](https://github.com/alloy-rs/alloy/issues/1782))
+
+## [0.8.0](https://github.com/alloy-rs/alloy/releases/tag/v0.8.0) - 2024-12-10
+
+### Bug Fixes
+
+- Use asref impl for receipt ([#1758](https://github.com/alloy-rs/alloy/issues/1758))
+
+### Features
+
+- [consensus] Require typed2718 for transaction ([#1746](https://github.com/alloy-rs/alloy/issues/1746))
+- Relax RPC `Block` bounds ([#1757](https://github.com/alloy-rs/alloy/issues/1757))
+
+### Miscellaneous Tasks
+
+- Release 0.8.0 ([#1778](https://github.com/alloy-rs/alloy/issues/1778))
+- Improve Display and Debug for BlockId ([#1765](https://github.com/alloy-rs/alloy/issues/1765))
+
+### Other
+
+- Reapply "feat(consensus): require typed2718 for transaction ([#1746](https://github.com/alloy-rs/alloy/issues/1746))" ([#1773](https://github.com/alloy-rs/alloy/issues/1773))
+- Revert "feat(consensus): require typed2718 for transaction ([#1746](https://github.com/alloy-rs/alloy/issues/1746))" ([#1772](https://github.com/alloy-rs/alloy/issues/1772))
+
+## [0.7.3](https://github.com/alloy-rs/alloy/releases/tag/v0.7.3) - 2024-12-05
+
+### Miscellaneous Tasks
+
+- Release 0.7.3
+
+## [Unreleased](https://github.com/alloy-rs/alloy/compare/v0.7.0...HEAD)
+
+### Bug Fixes
+
+- Remove `Borrow` impl for RPC receipt ([#1721](https://github.com/alloy-rs/alloy/issues/1721))
+
+### Dependencies
+
+- [general] Bump MSRV to 1.81, use `core::error::Error` on `no-std` compatible crates ([#1552](https://github.com/alloy-rs/alloy/issues/1552))
+
+### Features
+
+- Feat(rpc-types-eth) add test for syncing ([#1724](https://github.com/alloy-rs/alloy/issues/1724))
+
+### Miscellaneous Tasks
+
+- Release 0.7.2 ([#1729](https://github.com/alloy-rs/alloy/issues/1729))
+
+## [0.7.0](https://github.com/alloy-rs/alloy/releases/tag/v0.7.0) - 2024-11-28
+
+### Features
+
+- EIP-7742 ([#1600](https://github.com/alloy-rs/alloy/issues/1600))
+- Add helpers to initialize Tx request ([#1690](https://github.com/alloy-rs/alloy/issues/1690))
+- Modifiy ReceiptWithBloom and associated impls to use with Reth ([#1672](https://github.com/alloy-rs/alloy/issues/1672))
+- [consensus-tx] Enable fast `is_create` ([#1683](https://github.com/alloy-rs/alloy/issues/1683))
+- Move `AnyReceipt` and `AnyHeader` to `alloy-consensus-any` ([#1609](https://github.com/alloy-rs/alloy/issues/1609))
+
+### Miscellaneous Tasks
+
+- Release 0.7.0
+- Release 0.7.0
+- Release 0.7.0
+- Move from impls to where they belong ([#1691](https://github.com/alloy-rs/alloy/issues/1691))
+- Add new fn to eip1186 ([#1692](https://github.com/alloy-rs/alloy/issues/1692))
+- Make clippy happy ([#1677](https://github.com/alloy-rs/alloy/issues/1677))
+
+### Other
+
+- Add unit tests for pubsub ([#1663](https://github.com/alloy-rs/alloy/issues/1663))
+
+### Testing
+
+- Add test for 7702 with v ([#1644](https://github.com/alloy-rs/alloy/issues/1644))
+
+## [0.6.4](https://github.com/alloy-rs/alloy/releases/tag/v0.6.4) - 2024-11-12
+
+### Miscellaneous Tasks
+
+- Release 0.6.4
+
+### Other
+
+- Add trait method `Transaction::effective_gas_price` ([#1640](https://github.com/alloy-rs/alloy/issues/1640))
+
+## [0.6.3](https://github.com/alloy-rs/alloy/releases/tag/v0.6.3) - 2024-11-12
+
+### Bug Fixes
+
+- Serde for transactions ([#1630](https://github.com/alloy-rs/alloy/issues/1630))
+- [`rpc-types`] `FeeHistory` deser ([#1629](https://github.com/alloy-rs/alloy/issues/1629))
+
+### Miscellaneous Tasks
+
+- Release 0.6.3
+- Release 0.6.2 ([#1632](https://github.com/alloy-rs/alloy/issues/1632))
+
+### Other
+
+- Add trait method `Transaction::is_dynamic_fee` ([#1638](https://github.com/alloy-rs/alloy/issues/1638))
+
+## [0.6.1](https://github.com/alloy-rs/alloy/releases/tag/v0.6.1) - 2024-11-06
+
+### Bug Fixes
+
+- Re-introduce HeaderResponse trait ([#1627](https://github.com/alloy-rs/alloy/issues/1627))
+
+### Miscellaneous Tasks
+
+- Release 0.6.1
+
+## [0.6.0](https://github.com/alloy-rs/alloy/releases/tag/v0.6.0) - 2024-11-06
+
+### Bug Fixes
+
+- Hash handling ([#1604](https://github.com/alloy-rs/alloy/issues/1604))
+- Update AnyNetwork type aliases ([#1591](https://github.com/alloy-rs/alloy/issues/1591))
+
+### Features
+
+- Implement Arbitrary for transaction types ([#1603](https://github.com/alloy-rs/alloy/issues/1603))
+- Embed consensus header into RPC ([#1573](https://github.com/alloy-rs/alloy/issues/1573))
+
+### Miscellaneous Tasks
+
+- Release 0.6.0
+
+### Other
+
+- Embed TxEnvelope into `rpc-types-eth::Transaction` ([#1460](https://github.com/alloy-rs/alloy/issues/1460))
+- Add `BadBlock` type to `debug_getbadblocks` return type ([#1566](https://github.com/alloy-rs/alloy/issues/1566))
+- Add `uncle_block_from_header` impl and test ([#1554](https://github.com/alloy-rs/alloy/issues/1554))
+- Impl `From<Sealed<alloy_consensus::Header>>` for `Header` ([#1532](https://github.com/alloy-rs/alloy/issues/1532))
+
+### Styling
+
+- Move txtype-specific builders to network-primitives ([#1602](https://github.com/alloy-rs/alloy/issues/1602))
+
+## [0.5.4](https://github.com/alloy-rs/alloy/releases/tag/v0.5.4) - 2024-10-23
+
+### Miscellaneous Tasks
+
+- Release 0.5.4
+
 ## [0.5.3](https://github.com/alloy-rs/alloy/releases/tag/v0.5.3) - 2024-10-22
 
 ### Bug Fixes

@@ -24,7 +24,7 @@ jobs:
         rust:
           - "stable"
           - "nightly"
-          - "1.79" # MSRV
+          - "1.81" # MSRV
         flags:
           # No features
           - "--no-default-features"
@@ -34,7 +34,7 @@ jobs:
           - "--all-features"
         exclude:
           # All features on MSRV
-          - rust: "1.79" # MSRV
+          - rust: "1.81" # MSRV
             flags: "--all-features"
     steps:
       - uses: actions/checkout@v4
@@ -53,14 +53,14 @@ jobs:
           cache-on-failure: true
       # Only run tests on latest stable and above
       - name: Install cargo-nextest
-        if: ${{ matrix.rust != '1.79' }} # MSRV
+        if: ${{ matrix.rust != '1.81' }} # MSRV
         uses: taiki-e/install-action@nextest
       - name: build
-        if: ${{ matrix.rust == '1.79' }} # MSRV
+        if: ${{ matrix.rust == '1.81' }} # MSRV
         run: cargo build --workspace ${{ matrix.flags }}
       - name: test
         shell: bash
-        if: ${{ matrix.rust != '1.79' }} # MSRV
+        if: ${{ matrix.rust != '1.81' }} # MSRV
         run: cargo nextest run --workspace ${{ matrix.flags }}
 
   doctest:
@@ -195,15 +195,26 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all --check
 
-  cfg-check:
+  deny:
+    uses: ithacaxyz/ci/.github/workflows/deny.yml@main
+
+  ci-success:
+    name: ci success
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    if: always()
+    needs:
+      - test
+      - doctest
+      - wasm-unknown
+      - wasm-wasi
+      - feature-checks
+      - check-no-std
+      - clippy
+      - docs
+      - fmt
+      - deny
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
         with:
-          toolchain: nightly
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-      - run: cargo check -Zcheck-cfg --workspace
+          jobs: ${{ toJSON(needs) }}

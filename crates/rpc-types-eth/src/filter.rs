@@ -54,7 +54,7 @@ impl<T: Eq + Hash> Hash for FilterSet<T> {
 
 impl<T: Eq + Hash> From<Vec<T>> for FilterSet<T> {
     fn from(src: Vec<T>) -> Self {
-        Self(src.into_iter().map(Into::into).collect())
+        Self(src.into_iter().collect())
     }
 }
 
@@ -153,10 +153,10 @@ impl From<U256> for Topic {
 }
 
 /// Represents errors that can occur when setting block filters in `FilterBlockOption`.
-#[derive(Debug, PartialEq, Eq, derive_more::Display)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum FilterBlockError {
     /// Error indicating that the `from_block` is greater than the `to_block`.
-    #[display("`from_block` ({from}) is greater than `to_block` ({to})")]
+    #[error("`from_block` ({from}) is greater than `to_block` ({to})")]
     FromBlockGreaterThanToBlock {
         /// The starting block number, which is greater than `to`.
         from: u64,
@@ -164,9 +164,6 @@ pub enum FilterBlockError {
         to: u64,
     },
 }
-
-#[cfg(feature = "std")]
-impl std::error::Error for FilterBlockError {}
 
 /// Represents the target range of blocks for the filter
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -418,8 +415,8 @@ impl Filter {
     /// Return `true` if filter configured to match pending block.
     /// This means that both from_block and to_block are set to the pending tag.
     pub fn is_pending_block_filter(&self) -> bool {
-        self.block_option.get_from_block().map_or(false, BlockNumberOrTag::is_pending)
-            && self.block_option.get_to_block().map_or(false, BlockNumberOrTag::is_pending)
+        self.block_option.get_from_block().is_some_and(BlockNumberOrTag::is_pending)
+            && self.block_option.get_to_block().is_some_and(BlockNumberOrTag::is_pending)
     }
 
     /// Pins the block hash for the filter
@@ -894,7 +891,7 @@ impl FilteredParams {
     /// This means that both from_block and to_block are set to the pending tag.
     /// It calls [`Filter::is_pending_block_filter`] undercover.
     pub fn is_pending_block_filter(&self) -> bool {
-        self.filter.as_ref().map_or(false, |f| f.is_pending_block_filter())
+        self.filter.as_ref().is_some_and(|f| f.is_pending_block_filter())
     }
 
     /// Returns `true` if the filter matches the given address.

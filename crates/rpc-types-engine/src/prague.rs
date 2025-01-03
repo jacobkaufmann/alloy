@@ -3,18 +3,26 @@
 
 use alloc::vec::Vec;
 
-use alloy_eips::eip7685::Requests;
+use alloy_eips::eip7685::{Requests, RequestsOrHash};
+use alloy_primitives::B256;
 
 /// Fields introduced in `engine_newPayloadV4` that are not present in the `ExecutionPayload` RPC
 /// object.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PraguePayloadFields {
-    /// The execution requests.
-    pub requests: Requests,
+    /// EIP-7685 requests.
+    pub requests: RequestsOrHash,
 
     /// The IL.
     pub il: Vec<Vec<u8>>,
+}
+
+impl PraguePayloadFields {
+    /// Returns a new [`PraguePayloadFields`] instance.
+    pub fn new(requests: impl Into<RequestsOrHash>, il: Vec<Vec<u8>>) -> Self {
+        Self { requests: requests.into(), il }
+    }
 }
 
 /// A container type for [PraguePayloadFields] that may or may not be present.
@@ -25,24 +33,33 @@ pub struct MaybePraguePayloadFields {
 }
 
 impl MaybePraguePayloadFields {
-    /// Returns a new `MaybePraguePayloadFields` with no prague fields.
+    /// Returns a new [`MaybePraguePayloadFields`] with no prague fields.
     pub const fn none() -> Self {
         Self { fields: None }
     }
 
-    /// Returns a new `MaybePraguePayloadFields` with the given prague fields.
+    /// Returns a new [`MaybePraguePayloadFields`] with the given prague fields.
     pub fn into_inner(self) -> Option<PraguePayloadFields> {
         self.fields
     }
 
-    /// Returns the execution requests, if any.
+    /// Returns the requests, if any.
     pub fn requests(&self) -> Option<&Requests> {
-        self.fields.as_ref().map(|fields| &fields.requests)
+        self.fields.as_ref().and_then(|fields| fields.requests.requests())
     }
 
     /// Returns the IL, if any.
     pub fn il(&self) -> Option<&Vec<Vec<u8>>> {
         self.fields.as_ref().map(|fields| &fields.il)
+    }
+
+    /// Calculates or retrieves the requests hash.
+    ///
+    /// - If the `prague` field contains a list of requests, it calculates the requests hash
+    ///   dynamically.
+    /// - If it contains a precomputed hash (used for testing), it returns that hash directly.
+    pub fn requests_hash(&self) -> Option<B256> {
+        self.fields.as_ref().map(|fields| fields.requests.requests_hash())
     }
 
     /// Returns a reference to the inner fields.

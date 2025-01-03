@@ -22,9 +22,7 @@ pub type BorrowedRpcResult<'a, E> = RpcResult<&'a RawValue, E, &'a RawValue>;
 /// Transform a transport response into an [`RpcResult`], discarding the [`Id`].
 ///
 /// [`Id`]: crate::Id
-pub fn transform_response<T, E, ErrResp>(
-    response: Response<T, ErrResp>,
-) -> Result<T, RpcError<E, ErrResp>>
+pub fn transform_response<T, E, ErrResp>(response: Response<T, ErrResp>) -> RpcResult<T, E, ErrResp>
 where
     ErrResp: RpcReturn,
 {
@@ -62,7 +60,7 @@ where
 {
     let json = result?;
     let json = json.borrow().get();
-    trace!(ty=%std::any::type_name::<T>(), json, "deserializing response");
+    trace!(ty=%std::any::type_name::<T>(), %json, "deserializing response");
     serde_json::from_str(json)
         .inspect(|response| trace!(?response, "deserialized response"))
         .inspect_err(|err| trace!(?err, "failed to deserialize response"))

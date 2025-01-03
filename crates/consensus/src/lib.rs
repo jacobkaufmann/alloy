@@ -9,33 +9,32 @@
 
 extern crate alloc;
 
-mod account;
-pub use account::Account;
+pub use alloy_trie::TrieAccount;
+
+#[deprecated(since = "0.7.3", note = "use TrieAccount instead")]
+pub use alloy_trie::TrieAccount as Account;
 
 mod block;
-pub use block::{Block, BlockBody};
+pub use block::{Block, BlockBody, BlockHeader, Header};
 
 pub mod constants;
 pub use constants::{EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 
-mod encodable_signature;
-pub use encodable_signature::EncodableSignature;
-
-mod header;
-pub use header::{BlockHeader, Header};
-
 mod receipt;
 pub use receipt::{
-    AnyReceiptEnvelope, Eip658Value, Receipt, ReceiptEnvelope, ReceiptWithBloom, Receipts,
-    TxReceipt,
+    Eip2718EncodableReceipt, Eip658Value, Receipt, ReceiptEnvelope, ReceiptWithBloom, Receipts,
+    RlpDecodableReceipt, RlpEncodableReceipt, TxReceipt,
 };
+
+pub mod conditional;
+pub mod proofs;
 
 pub mod transaction;
 #[cfg(feature = "kzg")]
 pub use transaction::BlobTransactionValidationError;
 pub use transaction::{
     SignableTransaction, Transaction, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
-    TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxLegacy, TxType, TypedTransaction,
+    TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxLegacy, TxType, Typed2718, TypedTransaction,
 };
 
 pub use alloy_eips::eip4844::{
@@ -61,7 +60,7 @@ pub use signed::Signed;
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub mod serde_bincode_compat {
     pub use super::{
-        header::serde_bincode_compat::*,
+        block::serde_bincode_compat::*,
         transaction::{serde_bincode_compat as transaction, serde_bincode_compat::*},
     };
 }
