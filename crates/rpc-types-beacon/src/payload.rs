@@ -109,7 +109,7 @@ struct BeaconPayloadAttributes {
     #[serde(skip_serializing_if = "Option::is_none")]
     parent_beacon_block_root: Option<B256>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    il: Option<Vec<Vec<u8>>>,
+    il: Option<Vec<Bytes>>,
 }
 
 /// Optimism Payload Attributes

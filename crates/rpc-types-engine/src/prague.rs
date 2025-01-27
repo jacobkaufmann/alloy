@@ -4,7 +4,7 @@
 use alloc::vec::Vec;
 
 use alloy_eips::eip7685::{Requests, RequestsOrHash};
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 
 /// Fields introduced in `engine_newPayloadV4` that are not present in the `ExecutionPayload` RPC
 /// object.
@@ -15,12 +15,12 @@ pub struct PraguePayloadFields {
     pub requests: RequestsOrHash,
 
     /// The IL.
-    pub il: Vec<Vec<u8>>,
+    pub il: Vec<Bytes>,
 }
 
 impl PraguePayloadFields {
     /// Returns a new [`PraguePayloadFields`] instance.
-    pub fn new(requests: impl Into<RequestsOrHash>, il: Vec<Vec<u8>>) -> Self {
+    pub fn new(requests: impl Into<RequestsOrHash>, il: Vec<Bytes>) -> Self {
         Self { requests: requests.into(), il }
     }
 }
@@ -49,7 +49,7 @@ impl MaybePraguePayloadFields {
     }
 
     /// Returns the IL, if any.
-    pub fn il(&self) -> Option<&Vec<Vec<u8>>> {
+    pub fn il(&self) -> Option<&Vec<Bytes>> {
         self.fields.as_ref().map(|fields| &fields.il)
     }
 
