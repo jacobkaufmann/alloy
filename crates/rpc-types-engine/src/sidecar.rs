@@ -6,7 +6,7 @@ use crate::{
 use alloc::vec::Vec;
 use alloy_consensus::{Block, Transaction};
 use alloy_eips::eip7685::Requests;
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 
 /// Container type for all available additional `newPayload` request parameters that are not present
 /// in the `ExecutionPayload` object itself.
@@ -39,7 +39,10 @@ impl ExecutionPayloadSidecar {
                 versioned_hashes: block.body.blob_versioned_hashes_iter().copied().collect(),
             });
 
-        let prague = block.requests_hash.map(PraguePayloadFields::new);
+        // NOTE
+        //
+        // the inclusion list cannot be determined from the block
+        let prague = block.requests_hash.map(|reqs| PraguePayloadFields::new(reqs, vec![]));
 
         match (cancun, prague) {
             (Some(cancun), Some(prague)) => Self::v4(cancun, prague),
@@ -98,5 +101,10 @@ impl ExecutionPayloadSidecar {
     /// - If it contains a precomputed hash (used for testing), it returns that hash directly.
     pub fn requests_hash(&self) -> Option<B256> {
         self.prague.requests_hash()
+    }
+
+    /// Returns the IL
+    pub fn il(&self) -> Option<&Vec<Bytes>> {
+        self.prague.il()
     }
 }
