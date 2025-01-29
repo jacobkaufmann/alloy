@@ -6,7 +6,7 @@ use alloc::{
     vec::Vec,
 };
 use alloy_consensus::{
-    constants::MAXIMUM_EXTRA_DATA_SIZE, Blob, Block, BlockBody, Bytes48, Header,
+    constants::MAXIMUM_EXTRA_DATA_SIZE, Blob, Block, BlockBody, Bytes48, Header, Transaction,
     EMPTY_OMMER_ROOT_HASH,
 };
 use alloy_eips::{
@@ -64,6 +64,35 @@ pub enum ExecutionPayloadFieldV2 {
 }
 
 impl ExecutionPayloadFieldV2 {
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadFieldV2`].
+    ///
+    /// See also:
+    ///  - [`ExecutionPayloadV1::from_block_unchecked`].
+    ///  - [`ExecutionPayloadV2::from_block_unchecked`].
+    ///
+    /// If the block body contains withdrawals this returns [`ExecutionPayloadFieldV2::V2`].
+    ///
+    /// Note: This re-calculates the block hash.
+    pub fn from_block_slow<T: Encodable2718>(block: &Block<T>) -> Self {
+        Self::from_block_unchecked(block.hash_slow(), block)
+    }
+
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayloadFieldV2`] using the given block
+    /// hash.
+    ///
+    /// See also:
+    ///  - [`ExecutionPayloadV1::from_block_unchecked`].
+    ///  - [`ExecutionPayloadV2::from_block_unchecked`].
+    ///
+    /// If the block body contains withdrawals this returns [`ExecutionPayloadFieldV2::V2`].
+    pub fn from_block_unchecked<T: Encodable2718>(block_hash: B256, block: &Block<T>) -> Self {
+        if block.body.withdrawals.is_some() {
+            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+        } else {
+            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+        }
+    }
+
     /// Returns the inner [ExecutionPayloadV1]
     pub fn into_v1_payload(self) -> ExecutionPayloadV1 {
         match self {
@@ -770,6 +799,48 @@ pub enum ExecutionPayload {
 }
 
 impl ExecutionPayload {
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayload`] and also returns the
+    /// [`ExecutionPayloadSidecar`] extracted from the block.
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    /// See also [`ExecutionPayloadSidecar::from_block`].
+    ///
+    /// Note: This re-calculates the block hash.
+    pub fn from_block_slow<T>(block: &Block<T>) -> (Self, ExecutionPayloadSidecar)
+    where
+        T: Encodable2718 + Transaction,
+    {
+        Self::from_block_unchecked(block.hash_slow(), block)
+    }
+
+    /// Converts [`alloy_consensus::Block`] to [`ExecutionPayload`] and also returns the
+    /// [`ExecutionPayloadSidecar`] extracted from the block.
+    ///
+    /// See also [`ExecutionPayloadV3::from_block_unchecked`].
+    /// See also [`ExecutionPayloadSidecar::from_block`].
+    pub fn from_block_unchecked<T>(
+        block_hash: B256,
+        block: &Block<T>,
+    ) -> (Self, ExecutionPayloadSidecar)
+    where
+        T: Encodable2718 + Transaction,
+    {
+        let sidecar = ExecutionPayloadSidecar::from_block(block);
+
+        let execution_payload = if block.header.parent_beacon_block_root.is_some() {
+            // block with parent beacon block root: V3
+            Self::V3(ExecutionPayloadV3::from_block_unchecked(block_hash, block))
+        } else if block.body.withdrawals.is_some() {
+            // block with withdrawals: V2
+            Self::V2(ExecutionPayloadV2::from_block_unchecked(block_hash, block))
+        } else {
+            // otherwise V1
+            Self::V1(ExecutionPayloadV1::from_block_unchecked(block_hash, block))
+        };
+
+        (execution_payload, sidecar)
+    }
+
     /// Tries to create a new unsealed block from the given payload and payload sidecar.
     ///
     /// Performs additional validation of `extra_data` and `base_fee_per_gas` fields.

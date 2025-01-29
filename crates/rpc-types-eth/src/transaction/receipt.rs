@@ -1,7 +1,5 @@
 use crate::Log;
-use alloc::vec::Vec;
 use alloy_consensus::{ReceiptEnvelope, TxReceipt, TxType};
-use alloy_eips::eip7702::SignedAuthorization;
 use alloy_network_primitives::ReceiptResponse;
 use alloy_primitives::{Address, BlockHash, TxHash, B256};
 
@@ -15,7 +13,7 @@ use alloy_primitives::{Address, BlockHash, TxHash, B256};
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
 #[doc(alias = "TxReceipt")]
 pub struct TransactionReceipt<T = ReceiptEnvelope<Log>> {
-    /// The receipt envelope, which contains the consensus receipt data..
+    /// The receipt envelope, which contains the consensus receipt data.
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub inner: T,
     /// Transaction Hash.
@@ -67,10 +65,6 @@ pub struct TransactionReceipt<T = ReceiptEnvelope<Log>> {
     pub to: Option<Address>,
     /// Contract address created, or None if not a deployment.
     pub contract_address: Option<Address>,
-    /// The authorization list is a list of tuples that store the address to code which the signer
-    /// desires to execute in the context of their EOA.
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    pub authorization_list: Option<Vec<SignedAuthorization>>,
 }
 
 impl AsRef<ReceiptEnvelope<Log>> for TransactionReceipt {
@@ -128,8 +122,33 @@ impl<T> TransactionReceipt<T> {
             from: self.from,
             to: self.to,
             contract_address: self.contract_address,
-            authorization_list: self.authorization_list,
         }
+    }
+
+    /// Consumes the type and returns the wrapped receipt.
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+}
+
+impl<L> TransactionReceipt<ReceiptEnvelope<L>> {
+    /// Converts the receipt's log type by applying a function to each log.
+    ///
+    /// Returns the receipt with the new log type.
+    pub fn map_logs<U>(self, f: impl FnMut(L) -> U) -> TransactionReceipt<ReceiptEnvelope<U>> {
+        self.map_inner(|inner| inner.map_logs(f))
+    }
+
+    /// Converts the transaction receipt's [`ReceiptEnvelope`] with a custom log type into a
+    /// [`ReceiptEnvelope`] with the primitives [`alloy_primitives::Log`] type by converting the
+    /// logs.
+    pub fn into_primitives_receipt(
+        self,
+    ) -> TransactionReceipt<ReceiptEnvelope<alloy_primitives::Log>>
+    where
+        L: Into<alloy_primitives::Log>,
+    {
+        self.map_logs(Into::into)
     }
 }
 
@@ -182,16 +201,18 @@ impl<T: TxReceipt<Log = Log>> ReceiptResponse for TransactionReceipt<T> {
         self.to
     }
 
-    fn authorization_list(&self) -> Option<&[SignedAuthorization]> {
-        self.authorization_list.as_deref()
-    }
-
     fn cumulative_gas_used(&self) -> u64 {
         self.inner.cumulative_gas_used()
     }
 
     fn state_root(&self) -> Option<B256> {
         self.inner.status_or_post_state().as_post_state()
+    }
+}
+
+impl From<TransactionReceipt> for TransactionReceipt<ReceiptEnvelope<alloy_primitives::Log>> {
+    fn from(value: TransactionReceipt) -> Self {
+        value.into_primitives_receipt()
     }
 }
 

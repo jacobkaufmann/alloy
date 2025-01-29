@@ -1,7 +1,8 @@
+use crate::{Http, HttpConnect};
 use alloy_json_rpc::{RequestPacket, ResponsePacket};
 use alloy_transport::{
-    utils::guess_local_url, TransportConnect, TransportError, TransportErrorKind, TransportFut,
-    TransportResult,
+    utils::guess_local_url, BoxTransport, TransportConnect, TransportError, TransportErrorKind,
+    TransportFut, TransportResult,
 };
 use http_body_util::{BodyExt, Full};
 use hyper::{
@@ -13,8 +14,13 @@ use std::{future::Future, marker::PhantomData, pin::Pin, task};
 use tower::Service;
 use tracing::{debug, debug_span, trace, Instrument};
 
-use crate::{Http, HttpConnect};
+#[cfg(feature = "hyper-tls")]
+type Hyper = hyper_util::client::legacy::Client<
+    hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
+    http_body_util::Full<::hyper::body::Bytes>,
+>;
 
+#[cfg(not(feature = "hyper-tls"))]
 type Hyper = hyper_util::client::legacy::Client<
     hyper_util::client::legacy::connect::HttpConnector,
     http_body_util::Full<::hyper::body::Bytes>,
@@ -50,9 +56,13 @@ impl HyperClient {
     pub fn new() -> Self {
         let executor = hyper_util::rt::TokioExecutor::new();
 
+        #[cfg(feature = "hyper-tls")]
+        let service = hyper_util::client::legacy::Client::builder(executor)
+            .build(hyper_tls::HttpsConnector::new());
+
+        #[cfg(not(feature = "hyper-tls"))]
         let service =
             hyper_util::client::legacy::Client::builder(executor).build_http::<Full<Bytes>>();
-
         Self { service, _pd: PhantomData }
     }
 }
@@ -124,20 +134,12 @@ where
 }
 
 impl TransportConnect for HttpConnect<HyperTransport> {
-    type Transport = HyperTransport;
-
     fn is_local(&self) -> bool {
         guess_local_url(self.url.as_str())
     }
 
-    fn get_transport<'a: 'b, 'b>(
-        &'a self,
-    ) -> alloy_transport::Pbf<'b, Self::Transport, TransportError> {
-        Box::pin(async move {
-            let hyper_t = HyperClient::new();
-
-            Ok(Http::with_client(hyper_t, self.url.clone()))
-        })
+    async fn get_transport(&self) -> Result<BoxTransport, TransportError> {
+        Ok(BoxTransport::new(Http::with_client(HyperClient::new(), self.url.clone())))
     }
 }
 

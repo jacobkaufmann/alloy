@@ -334,6 +334,27 @@ impl Header {
     pub const fn seal(self, hash: B256) -> Sealed<Self> {
         Sealed::new_unchecked(self, hash)
     }
+
+    /// True if the shanghai hardfork is active.
+    ///
+    /// This function checks that the withdrawals root field is present.
+    pub const fn shanghai_active(&self) -> bool {
+        self.withdrawals_root.is_some()
+    }
+
+    /// True if the Cancun hardfork is active.
+    ///
+    /// This function checks that the blob gas used field is present.
+    pub const fn cancun_active(&self) -> bool {
+        self.blob_gas_used.is_some()
+    }
+
+    /// True if the Prague hardfork is active.
+    ///
+    /// This function checks that the requests hash is present.
+    pub const fn prague_active(&self) -> bool {
+        self.requests_hash.is_some()
+    }
 }
 
 impl Encodable for Header {
@@ -618,6 +639,14 @@ pub trait BlockHeader {
         Some(blob_params.next_block_excess_blob_gas(self.excess_blob_gas()?, self.blob_gas_used()?))
     }
 
+    /// Convenience function for [`Self::next_block_excess_blob_gas`] with an optional
+    /// [`BlobParams`] argument.
+    ///
+    /// Returns `None` if the `blob_params` are `None`.
+    fn maybe_next_block_excess_blob_gas(&self, blob_params: Option<BlobParams>) -> Option<u64> {
+        self.next_block_excess_blob_gas(blob_params?)
+    }
+
     /// Returns the blob fee for the next block according to the EIP-4844 spec.
     ///
     /// Returns `None` if `excess_blob_gas` is None.
@@ -625,6 +654,14 @@ pub trait BlockHeader {
     /// See also [BlockHeader::next_block_excess_blob_gas]
     fn next_block_blob_fee(&self, blob_params: BlobParams) -> Option<u128> {
         Some(blob_params.calc_blob_fee(self.next_block_excess_blob_gas(blob_params)?))
+    }
+
+    /// Convenience function for [`Self::next_block_blob_fee`] with an optional [`BlobParams`]
+    /// argument.
+    ///
+    /// Returns `None` if the `blob_params` are `None`.
+    fn maybe_next_block_blob_fee(&self, blob_params: Option<BlobParams>) -> Option<u128> {
+        self.next_block_blob_fee(blob_params?)
     }
 
     /// Calculate base fee for next block according to the EIP-1559 spec.

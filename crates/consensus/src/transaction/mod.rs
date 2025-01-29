@@ -60,6 +60,8 @@ pub mod serde_bincode_compat {
     };
 }
 
+use alloy_eips::Typed2718;
+
 /// Represents a minimal EVM transaction.
 #[doc(alias = "Tx")]
 #[auto_impl::auto_impl(&, Arc)]
@@ -249,14 +251,6 @@ impl<S: 'static> dyn SignableTransaction<S> {
 }
 
 #[cfg(feature = "serde")]
-impl<T: Typed2718> Typed2718 for alloy_serde::WithOtherFields<T> {
-    #[inline]
-    fn ty(&self) -> u8 {
-        self.inner.ty()
-    }
-}
-
-#[cfg(feature = "serde")]
 impl<T: Transaction> Transaction for alloy_serde::WithOtherFields<T> {
     #[inline]
     fn chain_id(&self) -> Option<ChainId> {
@@ -340,42 +334,5 @@ impl<T: Transaction> Transaction for alloy_serde::WithOtherFields<T> {
     #[inline]
     fn authorization_list(&self) -> Option<&[SignedAuthorization]> {
         self.inner.authorization_list()
-    }
-}
-
-/// A trait that helps to determine the type of the transaction.
-#[auto_impl::auto_impl(&)]
-pub trait Typed2718 {
-    /// Returns the EIP-2718 type flag.
-    fn ty(&self) -> u8;
-
-    /// Returns true if the type matches the given type.
-    fn is_type(&self, ty: u8) -> bool {
-        self.ty() == ty
-    }
-
-    /// Returns true if the type is a legacy transaction.
-    fn is_legacy(&self) -> bool {
-        self.ty() == 0
-    }
-
-    /// Returns true if the type is an EIP-2930 transaction.
-    fn is_eip2930(&self) -> bool {
-        self.ty() == 1
-    }
-
-    /// Returns true if the type is an EIP-1559 transaction.
-    fn is_eip1559(&self) -> bool {
-        self.ty() == 2
-    }
-
-    /// Returns true if the type is an EIP-4844 transaction.
-    fn is_eip4844(&self) -> bool {
-        self.ty() == 3
-    }
-
-    /// Returns true if the type is an EIP-7702 transaction.
-    fn is_eip7702(&self) -> bool {
-        self.ty() == 4
     }
 }

@@ -6,9 +6,9 @@ pub use header::{BlockHeader, Header};
 #[cfg(all(feature = "serde", feature = "serde-bincode-compat"))]
 pub(crate) use header::serde_bincode_compat;
 
-use crate::{Transaction, Typed2718};
+use crate::Transaction;
 use alloc::vec::Vec;
-use alloy_eips::eip4895::Withdrawals;
+use alloy_eips::{eip4895::Withdrawals, Typed2718};
 use alloy_primitives::B256;
 use alloy_rlp::{Decodable, Encodable, RlpDecodable, RlpEncodable};
 
@@ -94,6 +94,21 @@ impl<T, H> Block<T, H> {
                 withdrawals: self.body.withdrawals,
             },
         })
+    }
+
+    /// Returns the RLP encoded length of the block's header and body.
+    pub fn rlp_length_for(header: &H, body: &BlockBody<T>) -> usize
+    where
+        H: Encodable,
+        T: Encodable,
+    {
+        block_rlp::HelperRef {
+            header,
+            transactions: &body.transactions,
+            ommers: &body.ommers,
+            withdrawals: body.withdrawals.as_ref(),
+        }
+        .length()
     }
 }
 
@@ -214,11 +229,11 @@ mod block_rlp {
 
     #[derive(RlpEncodable)]
     #[rlp(trailing)]
-    struct HelperRef<'a, T, H> {
-        header: &'a H,
-        transactions: &'a Vec<T>,
-        ommers: &'a Vec<Header>,
-        withdrawals: Option<&'a Withdrawals>,
+    pub(crate) struct HelperRef<'a, T, H> {
+        pub(crate) header: &'a H,
+        pub(crate) transactions: &'a Vec<T>,
+        pub(crate) ommers: &'a Vec<Header>,
+        pub(crate) withdrawals: Option<&'a Withdrawals>,
     }
 
     impl<'a, T, H> From<&'a Block<T, H>> for HelperRef<'a, T, H> {

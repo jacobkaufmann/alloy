@@ -4,12 +4,12 @@
 use crate::{
     transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
     SignableTransaction, Signed, Transaction, TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxType,
-    Typed2718,
 };
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
     eip2930::AccessList,
     eip7702::SignedAuthorization,
+    Typed2718,
 };
 use alloy_primitives::{
     bytes, Bytes, ChainId, PrimitiveSignature as Signature, TxHash, TxKind, B256, U256,
@@ -79,7 +79,7 @@ impl PooledTransaction {
     /// length of the header + the length of the type flag and inner encoding.
     fn network_len(&self) -> usize {
         let mut payload_length = self.encode_2718_len();
-        if !Encodable2718::is_legacy(self) {
+        if !self.is_legacy() {
             payload_length += Header { list: false, payload_length }.length();
         }
 
@@ -282,16 +282,6 @@ impl Decodable for PooledTransaction {
 }
 
 impl Encodable2718 for PooledTransaction {
-    fn type_flag(&self) -> Option<u8> {
-        match self {
-            Self::Legacy(_) => None,
-            Self::Eip2930(_) => Some(0x01),
-            Self::Eip1559(_) => Some(0x02),
-            Self::Eip4844(_) => Some(0x03),
-            Self::Eip7702(_) => Some(0x04),
-        }
-    }
-
     fn encode_2718_len(&self) -> usize {
         match self {
             Self::Legacy(tx) => tx.eip2718_encoded_length(),
@@ -528,6 +518,7 @@ mod tests {
     use super::*;
     use alloy_primitives::{address, hex};
     use bytes::Bytes;
+    use std::path::PathBuf;
 
     #[test]
     fn invalid_legacy_pooled_decoding_input_too_short() {
@@ -601,5 +592,25 @@ mod tests {
         // we can also decode_enveloped
         let res = PooledTransaction::decode_2718(&mut &data[..]);
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn decode_encode_raw_4844_rlp() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("testdata/4844rlp");
+        let dir = std::fs::read_dir(path).expect("Unable to read folder");
+        for entry in dir {
+            let entry = entry.unwrap();
+            let content = std::fs::read_to_string(entry.path()).unwrap();
+            let raw = hex::decode(content.trim()).unwrap();
+            let tx = PooledTransaction::decode_2718(&mut raw.as_ref())
+                .map_err(|err| {
+                    panic!("Failed to decode transaction: {:?} {:?}", err, entry.path());
+                })
+                .unwrap();
+            // We want to test only EIP-4844 transactions
+            assert!(tx.is_eip4844());
+            let encoded = tx.encoded_2718();
+            assert_eq!(encoded.as_slice(), &raw[..], "{:?}", entry.path());
+        }
     }
 }
