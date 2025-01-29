@@ -1,8 +1,10 @@
 //! Contains types related to the Prague hardfork that will be used by RPC to communicate with the
 //! beacon consensus engine.
 
+use alloc::vec::Vec;
+
 use alloy_eips::eip7685::{Requests, RequestsOrHash};
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 
 /// Fields introduced in `engine_newPayloadV4` that are not present in the `ExecutionPayload` RPC
 /// object.
@@ -11,12 +13,14 @@ use alloy_primitives::B256;
 pub struct PraguePayloadFields {
     /// EIP-7685 requests.
     pub requests: RequestsOrHash,
+    /// The IL.
+    pub il: Vec<Bytes>,
 }
 
 impl PraguePayloadFields {
     /// Returns a new [`PraguePayloadFields`] instance.
-    pub fn new(requests: impl Into<RequestsOrHash>) -> Self {
-        Self { requests: requests.into() }
+    pub fn new(requests: impl Into<RequestsOrHash>, il: Vec<Bytes>) -> Self {
+        Self { requests: requests.into(), il }
     }
 }
 
@@ -50,6 +54,11 @@ impl MaybePraguePayloadFields {
     /// - If it contains a precomputed hash (used for testing), it returns that hash directly.
     pub fn requests_hash(&self) -> Option<B256> {
         self.fields.as_ref().map(|fields| fields.requests.requests_hash())
+    }
+
+    /// Returns the IL, if any.
+    pub fn il(&self) -> Option<&Vec<Bytes>> {
+        self.fields.as_ref().map(|fields| &fields.il)
     }
 
     /// Returns a reference to the inner fields.

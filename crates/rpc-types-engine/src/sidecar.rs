@@ -5,7 +5,7 @@ use crate::{
 };
 use alloc::vec::Vec;
 use alloy_eips::eip7685::Requests;
-use alloy_primitives::B256;
+use alloy_primitives::{Bytes, B256};
 
 /// Container type for all available additional `newPayload` request parameters that are not present
 /// in the `ExecutionPayload` object itself.
@@ -71,5 +71,10 @@ impl ExecutionPayloadSidecar {
     /// - If it contains a precomputed hash (used for testing), it returns that hash directly.
     pub fn requests_hash(&self) -> Option<B256> {
         self.prague.requests_hash()
+    }
+
+    /// Returns the IL
+    pub fn il(&self) -> Option<&Vec<Bytes>> {
+        self.prague.il()
     }
 }

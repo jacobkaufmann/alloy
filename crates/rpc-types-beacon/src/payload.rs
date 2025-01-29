@@ -108,6 +108,8 @@ struct BeaconPayloadAttributes {
     withdrawals: Option<Vec<Withdrawal>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     parent_beacon_block_root: Option<B256>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    il: Option<Vec<Bytes>>,
 }
 
 /// Optimism Payload Attributes
@@ -149,6 +151,7 @@ pub mod beacon_api_payload_attributes {
             suggested_fee_recipient: payload_attributes.suggested_fee_recipient,
             withdrawals: payload_attributes.withdrawals.clone(),
             parent_beacon_block_root: payload_attributes.parent_beacon_block_root,
+            il: payload_attributes.il.clone(),
         };
         beacon_api_payload_attributes.serialize(serializer)
     }
@@ -165,6 +168,7 @@ pub mod beacon_api_payload_attributes {
             suggested_fee_recipient: beacon_api_payload_attributes.suggested_fee_recipient,
             withdrawals: beacon_api_payload_attributes.withdrawals,
             parent_beacon_block_root: beacon_api_payload_attributes.parent_beacon_block_root,
+            il: beacon_api_payload_attributes.il,
         })
     }
 }
