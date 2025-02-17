@@ -1,7 +1,6 @@
 use crate::{poller::PollerBuilder, BatchRequest, ClientBuilder, RpcCall};
 use alloy_json_rpc::{Id, Request, RpcRecv, RpcSend};
 use alloy_transport::{BoxTransport, IntoBoxTransport};
-use alloy_transport_http::Http;
 use std::{
     borrow::Cow,
     ops::Deref,
@@ -21,6 +20,12 @@ pub type ClientRef<'a> = &'a RpcClientInner;
 
 /// Parameter type of a JSON-RPC request with no parameters.
 pub type NoParams = [(); 0];
+
+#[cfg(feature = "pubsub")]
+type MaybePubsub = Option<alloy_pubsub::PubSubFrontend>;
+
+#[cfg(not(feature = "pubsub"))]
+type MaybePubsub = Option<()>;
 
 /// A JSON-RPC client.
 ///
@@ -48,14 +53,49 @@ impl RpcClient {
     /// Create a new [`RpcClient`] with an HTTP transport.
     #[cfg(feature = "reqwest")]
     pub fn new_http(url: reqwest::Url) -> Self {
-        let http = Http::new(url);
+        let http = alloy_transport_http::Http::new(url);
         let is_local = http.guess_local();
         Self::new(http, is_local)
     }
 
     /// Creates a new [`RpcClient`] with the given transport.
     pub fn new(t: impl IntoBoxTransport, is_local: bool) -> Self {
-        Self(Arc::new(RpcClientInner::new(t, is_local)))
+        Self::new_maybe_pubsub(t, is_local, None)
+    }
+
+    /// Creates a new [`RpcClient`] with the given transport and an optional [`MaybePubsub`].
+    pub(crate) fn new_maybe_pubsub(
+        t: impl IntoBoxTransport,
+        is_local: bool,
+        pubsub: MaybePubsub,
+    ) -> Self {
+        Self(Arc::new(RpcClientInner::new_maybe_pubsub(t, is_local, pubsub)))
+    }
+
+    /// Creates the [`RpcClient`] with the `main_transport` (ipc, ws, http) and a `layer` closure.
+    ///
+    /// The `layer` fn is intended to be [`tower::ServiceBuilder::service`] that layers the
+    /// transport services. The `main_transport` is expected to the type that actually emits the
+    /// request object: `PubSubFrontend`. This exists so that we can intercept the
+    /// `PubSubFrontend` which we need for [`RpcClientInner::pubsub_frontend`].
+    /// This workaround exists because due to how [`tower::ServiceBuilder::service`] collapses into
+    /// a [`BoxTransport`] we wouldn't be obtain the [`MaybePubsub`] by downcasting the layered
+    /// `transport`.
+    pub(crate) fn new_layered<F, T, R>(is_local: bool, main_transport: T, layer: F) -> Self
+    where
+        F: FnOnce(T) -> R,
+        T: IntoBoxTransport,
+        R: IntoBoxTransport,
+    {
+        #[cfg(feature = "pubsub")]
+        {
+            let t = main_transport.clone().into_box_transport();
+            let maybe_pubsub = t.as_any().downcast_ref::<alloy_pubsub::PubSubFrontend>().cloned();
+            Self::new_maybe_pubsub(layer(main_transport), is_local, maybe_pubsub)
+        }
+
+        #[cfg(not(feature = "pubsub"))]
+        Self::new(layer(main_transport), is_local)
     }
 
     /// Creates a new [`RpcClient`] with the given inner client.
@@ -146,6 +186,14 @@ impl Deref for RpcClient {
 pub struct RpcClientInner {
     /// The underlying transport.
     pub(crate) transport: BoxTransport,
+    /// Stores a handle to the PubSub service if pubsub.
+    ///
+    /// We store this _transport_ because if built through the [`ClientBuilder`] with an additional
+    /// layer the actual transport can be an arbitrary type and we would be unable to obtain the
+    /// `PubSubFrontend` by downcasting the `transport`. For example
+    /// `RetryTransport<PubSubFrontend>`.
+    #[allow(unused)]
+    pub(crate) pubsub: MaybePubsub,
     /// `true` if the transport is local.
     pub(crate) is_local: bool,
     /// The next request ID to use.
@@ -163,10 +211,21 @@ impl RpcClientInner {
     pub fn new(t: impl IntoBoxTransport, is_local: bool) -> Self {
         Self {
             transport: t.into_box_transport(),
+            pubsub: None,
             is_local,
             id: AtomicU64::new(0),
             poll_interval: if is_local { AtomicU64::new(250) } else { AtomicU64::new(7000) },
         }
+    }
+
+    /// Create a new [`RpcClient`] with the given transport and an optional handle to the
+    /// `PubSubFrontend`.
+    pub(crate) fn new_maybe_pubsub(
+        t: impl IntoBoxTransport,
+        is_local: bool,
+        pubsub: MaybePubsub,
+    ) -> Self {
+        Self { pubsub, ..Self::new(t.into_box_transport(), is_local) }
     }
 
     /// Sets the starting ID for the client.
@@ -209,6 +268,9 @@ impl RpcClientInner {
     #[inline]
     #[track_caller]
     pub fn pubsub_frontend(&self) -> Option<&alloy_pubsub::PubSubFrontend> {
+        if let Some(pubsub) = &self.pubsub {
+            return Some(pubsub);
+        }
         self.transport.as_any().downcast_ref::<alloy_pubsub::PubSubFrontend>()
     }
 

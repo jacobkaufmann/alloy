@@ -8,7 +8,7 @@ mod root;
 pub use root::{builder, RootProvider};
 
 mod sendable;
-pub use sendable::SendableTx;
+pub use sendable::{SendableTx, SendableTxErr};
 
 mod r#trait;
 pub use r#trait::{FilterPollerBuilder, Provider};
@@ -18,3 +18,9 @@ pub use wallet::WalletProvider;
 
 mod with_block;
 pub use with_block::{ParamsWithBlock, RpcWithBlock};
+
+mod multicall;
+pub use multicall::*;
+
+mod erased;
+pub use erased::DynProvider;

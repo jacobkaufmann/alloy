@@ -27,25 +27,16 @@ use alloy_transport::TransportResult;
 use serde_json::value::RawValue;
 use std::borrow::Cow;
 
-use super::EthCallMany;
+use super::{DynProvider, Empty, EthCallMany, MulticallBuilder};
 
 /// A task that polls the provider with `eth_getFilterChanges`, returning a list of `R`.
 ///
 /// See [`PollerBuilder`] for more details.
 pub type FilterPollerBuilder<R> = PollerBuilder<(U256,), Vec<R>>;
 
-// todo: adjust docs
-// todo: reorder
-/// Provider is parameterized with a network and a transport. The default
-/// transport is type-erased, but you can do `Provider<Http, N>`.
+/// Ethereum JSON-RPC interface.
 ///
 /// # Subscriptions
-///
-/// **IMPORTANT:** this is currently only available when `T` is
-/// `PubSubFrontend` or `BoxedClient` over `PubSubFrontend` due to an internal
-/// limitation. This means that layering transports will always disable
-/// subscription support. See
-/// [issue #296](https://github.com/alloy-rs/alloy/issues/296).
 ///
 /// The provider supports `pubsub` subscriptions to new block headers and
 /// pending transactions. This is only available on `pubsub` clients, such as
@@ -98,6 +89,25 @@ pub trait Provider<N: Network = Ethereum>: Send + Sync {
     #[inline]
     fn weak_client(&self) -> WeakClient {
         self.root().weak_client()
+    }
+
+    /// Returns a type erased provider wrapped in Arc [`super::DynProvider`].
+    ///
+    /// ```no_run
+    /// use alloy_provider::{DynProvider, Provider, ProviderBuilder};
+    /// # async fn f() {
+    /// let provider: DynProvider =
+    ///     ProviderBuilder::new().on_http("http://localhost:8080".parse().unwrap()).erased();
+    /// let block = provider.get_block_number().await.unwrap();
+    ///
+    /// # }
+    /// ```
+    #[auto_impl(keep_default_for(&, &mut, Rc, Arc, Box))]
+    fn erased(self) -> DynProvider<N>
+    where
+        Self: Sized + 'static,
+    {
+        DynProvider::new(self)
     }
 
     /// Gets the accounts in the remote node. This is usually empty unless you're using a local
@@ -169,6 +179,51 @@ pub trait Provider<N: Network = Ethereum>: Send + Sync {
         bundles: &'req Vec<Bundle>,
     ) -> EthCallMany<'req, N, Vec<Vec<EthCallResponse>>> {
         EthCallMany::new(self.weak_client(), bundles)
+    }
+
+    /// Execute a multicall by leveraging the [`MulticallBuilder`].
+    ///
+    /// This function returns a [`MulticallBuilder`] which is used to add multiple calls and execute
+    /// them.
+    ///
+    /// ## Example
+    ///
+    /// ```ignore
+    /// use alloy_primitives::address;
+    /// use alloy_provider::{MulticallBuilder, Provider, ProviderBuilder};
+    /// use alloy_sol_types::sol;
+    ///
+    /// sol! {
+    ///    #[sol(rpc)]
+    ///    #[derive(Debug, PartialEq)]
+    ///    interface ERC20 {
+    ///        function totalSupply() external view returns (uint256 totalSupply);
+    ///        function balanceOf(address owner) external view returns (uint256 balance);
+    ///    }
+    /// }
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let weth = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
+    ///     let provider = ProviderBuilder::new().on_http("https://eth.merkle.io".parse().unwrap());
+    ///     let erc20 = ERC20::new(weth, &provider);
+    ///
+    ///     let ts_call = erc20.totalSupply();
+    ///     let balance_call = erc20.balanceOf(address!("d8dA6BF26964aF9D7eEd9e03E53415D37aA96045"));
+    ///
+    ///     let multicall = provider.multicall().add(ts_call).add(balance_call);
+    ///
+    ///     let (_block_num, (total_supply, balance)) = multicall.aggregate().await.unwrap();
+    ///
+    ///     println!("Total Supply: {:?}, Balance: {:?}", total_supply, balance);
+    /// }
+    /// ```
+    #[auto_impl(keep_default_for(&, &mut, Rc, Arc, Box))]
+    fn multicall(&self) -> MulticallBuilder<Empty, &Self, N>
+    where
+        Self: Sized,
+    {
+        MulticallBuilder::new(self)
     }
 
     /// Executes an arbitrary number of transactions on top of the requested state.
@@ -1352,10 +1407,7 @@ mod tests {
     #[cfg(feature = "ws")]
     #[tokio::test]
     async fn websocket_tls_setup() {
-        for url in [
-            "wss://eth-mainnet.ws.alchemyapi.io/v2/MdZcimFJ2yz2z6pw21UYL-KNA0zmgX-F",
-            "wss://mainnet.infura.io/ws/v3/b0f825787ba840af81e46c6a64d20754",
-        ] {
+        for url in ["wss://mainnet.infura.io/ws/v3/b0f825787ba840af81e46c6a64d20754"] {
             let _ = ProviderBuilder::<_, _, Ethereum>::default().on_builtin(url).await.unwrap();
         }
     }
@@ -1834,7 +1886,7 @@ mod tests {
         use alloy_network::TransactionBuilder;
         use alloy_sol_types::SolValue;
 
-        let url = "https://eth-mainnet.alchemyapi.io/v2/jGiK5vwDfC3F4r0bqukm-W2GqgdrxdSr";
+        let url = "https://reth-ethereum.ithaca.xyz/rpc";
         let provider = ProviderBuilder::new().on_http(url.parse().unwrap());
         let req = TransactionRequest::default()
             .with_to(address!("c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")) // WETH
@@ -1917,7 +1969,7 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "hyper-tls")]
     async fn hyper_https() {
-        let url = "https://eth-mainnet.alchemyapi.io/v2/jGiK5vwDfC3F4r0bqukm-W2GqgdrxdSr";
+        let url = "https://reth-ethereum.ithaca.xyz/rpc";
 
         // With the `hyper` feature enabled .on_builtin builds the provider based on
         // `HyperTransport`.
@@ -1956,7 +2008,7 @@ mod tests {
 
     #[tokio::test]
     async fn capture_anvil_logs() {
-        let mut anvil = Anvil::new().spawn();
+        let mut anvil = Anvil::new().keep_stdout().spawn();
 
         let provider = ProviderBuilder::new().on_http(anvil.endpoint_url());
 

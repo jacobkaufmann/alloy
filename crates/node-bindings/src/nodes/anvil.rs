@@ -1,6 +1,10 @@
 //! Utilities for launching an Anvil instance.
 
+use crate::NodeError;
+use alloy_network::EthereumWallet;
 use alloy_primitives::{hex, Address, ChainId};
+use alloy_signer::Signer;
+use alloy_signer_local::LocalSigner;
 use k256::{ecdsa::SigningKey, SecretKey as K256SecretKey};
 use std::{
     ffi::OsString,
@@ -13,7 +17,9 @@ use std::{
 };
 use url::Url;
 
-use crate::NodeError;
+/// anvil's default ipc path
+pub const DEFAULT_IPC_ENDPOINT: &str =
+    if cfg!(unix) { "/tmp/anvil.ipc" } else { r"\\.\pipe\anvil.ipc" };
 
 /// How long we will wait for anvil to indicate that it is ready.
 const ANVIL_STARTUP_TIMEOUT_MILLIS: u64 = 10_000;
@@ -26,6 +32,8 @@ pub struct AnvilInstance {
     child: Child,
     private_keys: Vec<K256SecretKey>,
     addresses: Vec<Address>,
+    wallet: Option<EthereumWallet>,
+    ipc_path: Option<String>,
     port: u16,
     chain_id: Option<ChainId>,
 }
@@ -73,6 +81,11 @@ impl AnvilInstance {
         format!("ws://localhost:{}", self.port)
     }
 
+    /// Returns the IPC path
+    pub fn ipc_path(&self) -> &str {
+        self.ipc_path.as_deref().unwrap_or(DEFAULT_IPC_ENDPOINT)
+    }
+
     /// Returns the HTTP endpoint url of this instance
     #[doc(alias = "http_endpoint_url")]
     pub fn endpoint_url(&self) -> Url {
@@ -82,6 +95,11 @@ impl AnvilInstance {
     /// Returns the Websocket endpoint url of this instance
     pub fn ws_endpoint_url(&self) -> Url {
         Url::parse(&self.ws_endpoint()).unwrap()
+    }
+
+    /// Returns the [`EthereumWallet`] of this instance generated from anvil dev accounts.
+    pub fn wallet(&self) -> Option<EthereumWallet> {
+        self.wallet.clone()
     }
 }
 
@@ -122,10 +140,12 @@ pub struct Anvil {
     block_time: Option<f64>,
     chain_id: Option<ChainId>,
     mnemonic: Option<String>,
+    ipc_path: Option<String>,
     fork: Option<String>,
     fork_block_number: Option<u64>,
     args: Vec<OsString>,
     timeout: Option<u64>,
+    keep_stdout: bool,
 }
 
 impl Anvil {
@@ -177,7 +197,15 @@ impl Anvil {
         self
     }
 
+    /// Sets the path for the the ipc server
+    pub fn ipc_path(mut self, path: impl Into<String>) -> Self {
+        self.ipc_path = Some(path.into());
+        self
+    }
+
     /// Sets the chain_id the `anvil` instance will use.
+    ///
+    /// By default [`DEFAULT_IPC_ENDPOINT`] will be used.
     pub const fn chain_id(mut self, chain_id: u64) -> Self {
         self.chain_id = Some(chain_id);
         self
@@ -243,6 +271,14 @@ impl Anvil {
         self
     }
 
+    /// Keep the handle to anvil's stdout in order to read from it.
+    ///
+    /// Caution: if the stdout handle isn't used, this can end up blocking.
+    pub const fn keep_stdout(mut self) -> Self {
+        self.keep_stdout = true;
+        self
+    }
+
     /// Consumes the builder and spawns `anvil`.
     ///
     /// # Panics
@@ -257,6 +293,10 @@ impl Anvil {
     pub fn try_spawn(self) -> Result<AnvilInstance, NodeError> {
         let mut cmd = self.program.as_ref().map_or_else(|| Command::new("anvil"), Command::new);
         cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::inherit());
+
+        // disable nightly warning
+        cmd.env("FOUNDRY_DISABLE_NIGHTLY_WARNING", "");
+
         let mut port = self.port.unwrap_or_default();
         cmd.arg("-p").arg(port.to_string());
 
@@ -280,6 +320,10 @@ impl Anvil {
             cmd.arg("--fork-block-number").arg(fork_block_number.to_string());
         }
 
+        if let Some(ipc_path) = &self.ipc_path {
+            cmd.arg("--ipc").arg(ipc_path);
+        }
+
         cmd.args(self.args);
 
         let mut child = cmd.spawn().map_err(NodeError::SpawnError)?;
@@ -293,6 +337,7 @@ impl Anvil {
         let mut addresses = Vec::new();
         let mut is_private_key = false;
         let mut chain_id = None;
+        let mut wallet = None;
         loop {
             if start + Duration::from_millis(self.timeout.unwrap_or(ANVIL_STARTUP_TIMEOUT_MILLIS))
                 <= Instant::now()
@@ -332,14 +377,40 @@ impl Anvil {
                     chain_id = Some(chain);
                 };
             }
+
+            if !private_keys.is_empty() {
+                let (default, remaining) = private_keys.split_first().unwrap();
+                let pks = remaining
+                    .iter()
+                    .map(|key| {
+                        let mut signer = LocalSigner::from(key.clone());
+                        signer.set_chain_id(chain_id);
+                        signer
+                    })
+                    .collect::<Vec<_>>();
+
+                let mut default_signer = LocalSigner::from(default.clone());
+                default_signer.set_chain_id(chain_id);
+                let mut w = EthereumWallet::new(default_signer);
+
+                for pk in pks {
+                    w.register_signer(pk);
+                }
+                wallet = Some(w);
+            }
         }
 
-        child.stdout = Some(reader.into_inner());
+        if self.keep_stdout {
+            // re-attach the stdout handle if requested
+            child.stdout = Some(reader.into_inner());
+        }
 
         Ok(AnvilInstance {
             child,
             private_keys,
             addresses,
+            wallet,
+            ipc_path: self.ipc_path,
             port,
             chain_id: self.chain_id.or(chain_id),
         })
