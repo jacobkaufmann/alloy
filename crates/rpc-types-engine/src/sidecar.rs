@@ -40,7 +40,7 @@ impl ExecutionPayloadSidecar {
                 versioned_hashes: block.body.blob_versioned_hashes_iter().copied().collect(),
             });
 
-        let prague = block.requests_hash().map(PraguePayloadFields::new);
+        let prague = block.requests_hash().map(|req| PraguePayloadFields::new(req, vec![]));
 
         match (cancun, prague) {
             (Some(cancun), Some(prague)) => Self::v4(cancun, prague),
